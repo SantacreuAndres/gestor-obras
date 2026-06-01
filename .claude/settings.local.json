@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude mcp *)",
+      "Read(//opt/homebrew/bin/**)",
+      "Bash(sw_vers -productVersion)",
+      "Read(//Users/andressantacreu/**)",
+      "Bash(mkdir -p ~/.local)",
+      "Bash(curl -fsSL https://nodejs.org/dist/v22.11.0/node-v22.11.0-darwin-arm64.tar.gz -o node.tar.gz)",
+      "Bash(tar -xzf node.tar.gz)",
+      "Bash(rm -rf node)",
+      "Bash(mv node-v22.11.0-darwin-arm64 node)",
+      "Bash(rm node.tar.gz)",
+      "Bash(touch ~/.zshrc)",
+      "Bash(echo 'export PATH=\"$HOME/.local/node/bin:$PATH\"')",
+      "Bash(export PATH=\"$HOME/.local/node/bin:$PATH\")",
+      "Bash(npm --version)",
+      "Bash(npx --version)",
+      "Bash(node -e \"const j=require\\('/Users/andressantacreu/.claude.json'\\); console.log\\('top-level keys:', Object.keys\\(j\\).slice\\(0,30\\).join\\(', '\\)\\); console.log\\('has mcpServers?', 'mcpServers' in j\\);\")",
+      "Bash(timeout 60 npx -y @supabase/mcp-server-supabase@latest --help)",
+      "Bash(npx -y @supabase/mcp-server-supabase@latest --help)"
+    ]
+  }
+}
