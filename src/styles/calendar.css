@@ -149,6 +149,25 @@
   font-weight: 600;
 }
 
+.events-panel-desktop {
+  display: none;
+  width: 300px;
+  background: var(--calendar-white);
+  border: 1px solid var(--calendar-border);
+  border-radius: 2px;
+  padding: 1rem;
+  max-height: 80vh;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+@media (min-width: 1024px) {
+  .events-panel-desktop {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
 .events-sidebar {
   position: fixed;
   right: 0;
@@ -400,6 +419,14 @@
    ============================================================ */
 
 @media (max-width: 768px) {
+  #mobile-events-btn {
+    display: inline-flex !important;
+  }
+
+  .events-panel-desktop {
+    display: none;
+  }
+
   .calendar-container {
     padding: 1rem;
     border-radius: 0;

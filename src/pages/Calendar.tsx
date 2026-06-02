@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import dayjs from 'dayjs'
 import { useCalendarEvents } from '../hooks/useCalendarEvents'
 import { calendarApi } from '../db/api'
@@ -8,17 +8,24 @@ import { CalendarSetup } from '../components/CalendarSetup'
 import '../styles/calendar.css'
 
 export function CalendarPage() {
-  const { events } = useCalendarEvents()
+  const { events: initialEvents } = useCalendarEvents()
+  const [events, setEvents] = useState<CalendarEvent[]>(initialEvents)
   const [currentDate, setCurrentDate] = useState(dayjs())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [showEventsList, setShowEventsList] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     eventTime: '',
     reminderMinutes: 0,
   })
+
+  // Sincronizar eventos iniciales
+  useEffect(() => {
+    setEvents(initialEvents)
+  }, [initialEvents])
 
   const monthStart = currentDate.startOf('month')
   const daysInMonth = monthStart.daysInMonth()
@@ -70,6 +77,12 @@ export function CalendarPage() {
         calendarStorage.add(newEvent)
       }
 
+      // Actualizar estado local inmediatamente
+      setEvents((prev) => {
+        const filtered = prev.filter((e) => e.id !== newEvent.id)
+        return [...filtered, newEvent]
+      })
+
       // Si hay recordatorio y notificaciones están habilitadas, programar recordatorio
       if (formData.reminderMinutes && 'Notification' in window) {
         scheduleNotification(newEvent, formData.reminderMinutes)
@@ -109,6 +122,10 @@ export function CalendarPage() {
         console.warn('Deleting from local storage:', supabaseErr)
         calendarStorage.delete(id)
       }
+
+      // Actualizar estado local
+      setEvents((prev) => prev.filter((e) => e.id !== id))
+      alert('✅ Evento eliminado')
     } catch (err) {
       console.error('Error deleting event:', err)
       alert('Error al eliminar el evento')
@@ -141,15 +158,26 @@ export function CalendarPage() {
   const monthName = currentDate.format('MMMM YYYY')
 
   return (
-    <div className="page">
+    <div className="page" style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
       <CalendarSetup onReady={() => {}} />
 
-      <div className="calendar-header">
-        <h1>📅 Calendario</h1>
-        <button onClick={handleRequestNotification} className="btn-secondary">
-          Habilitar notificaciones
-        </button>
-      </div>
+      <div style={{ flex: 1 }}>
+        <div className="calendar-header">
+          <h1>📅 Calendario</h1>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button onClick={handleRequestNotification} className="btn-secondary">
+              🔔 Notificaciones
+            </button>
+            <button
+              onClick={() => setShowEventsList(!showEventsList)}
+              className="btn-secondary"
+              style={{ display: 'none' }}
+              id="mobile-events-btn"
+            >
+              📋 Eventos
+            </button>
+          </div>
+        </div>
 
       <div className="calendar-container">
         {/* Navegador de meses */}
@@ -276,6 +304,110 @@ export function CalendarPage() {
         </div>
       )}
 
+      {/* Panel lateral con todos los eventos (Desktop) */}
+      <div className="events-panel-desktop">
+        <div className="sidebar-header">
+          <h3>📋 Todos los eventos</h3>
+        </div>
+
+        <div className="events-list">
+          {events.length === 0 ? (
+            <p className="text-soft">Sin eventos aún</p>
+          ) : (
+            events
+              .sort((a, b) => a.eventDate.localeCompare(b.eventDate))
+              .map((event) => (
+                <div key={event.id} className="event-card">
+                  <div className="event-time">
+                    {event.eventDate}
+                    {event.eventTime && ` • ${event.eventTime}`}
+                  </div>
+                  <div className="event-title">{event.title}</div>
+                  {event.description && (
+                    <div className="event-description">{event.description.substring(0, 50)}...</div>
+                  )}
+                  {event.reminderMinutes && (
+                    <div className="event-reminder">
+                      🔔 {event.reminderMinutes} min
+                    </div>
+                  )}
+                  <div className="event-actions">
+                    <button
+                      onClick={() => handleEditEvent(event)}
+                      className="btn-secondary small"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => handleDeleteEvent(event.id)}
+                      className="btn-danger small"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+              ))
+          )}
+        </div>
+      </div>
+
+      {/* Modal de eventos para Mobile */}
+      {showEventsList && (
+        <div className="modal-overlay" onClick={() => setShowEventsList(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2>📋 Todos los eventos</h2>
+
+            <div className="events-list">
+              {events.length === 0 ? (
+                <p className="text-soft">Sin eventos aún</p>
+              ) : (
+                events
+                  .sort((a, b) => a.eventDate.localeCompare(b.eventDate))
+                  .map((event) => (
+                    <div key={event.id} className="event-card">
+                      <div className="event-time">
+                        {event.eventDate}
+                        {event.eventTime && ` • ${event.eventTime}`}
+                      </div>
+                      <div className="event-title">{event.title}</div>
+                      {event.description && (
+                        <div className="event-description">{event.description}</div>
+                      )}
+                      {event.reminderMinutes && (
+                        <div className="event-reminder">
+                          🔔 {event.reminderMinutes} min
+                        </div>
+                      )}
+                      <div className="event-actions">
+                        <button
+                          onClick={() => handleEditEvent(event)}
+                          className="btn-secondary small"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEvent(event.id)}
+                          className="btn-danger small"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  ))
+              )}
+            </div>
+
+            <button
+              onClick={() => setShowEventsList(false)}
+              className="btn-secondary"
+              style={{ marginTop: '1rem', width: '100%' }}
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Lista de eventos del día seleccionado */}
       {selectedDate && !showForm && (
         <div className="events-sidebar">
@@ -331,6 +463,7 @@ export function CalendarPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }
