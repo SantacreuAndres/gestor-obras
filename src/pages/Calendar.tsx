@@ -70,9 +70,12 @@ export function CalendarPage() {
       setShowForm(false)
       setSelectedDate(null)
       setFormData({ title: '', description: '', eventTime: '', reminderMinutes: 0 })
+
+      // Mostrar confirmación
+      alert('✅ Evento guardado correctamente')
     } catch (err) {
       console.error('Error saving event:', err)
-      alert('Error al guardar el evento')
+      alert('Error al guardar el evento. Verifica que la tabla de calendario esté creada en Supabase.\n\nVe a Supabase Console → SQL Editor y ejecuta el SQL que está en el archivo init-db.mjs')
     }
   }
 
