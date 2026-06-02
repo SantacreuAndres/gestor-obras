@@ -110,6 +110,10 @@ export function Configuracion() {
       const r: SyncResult = await googleSyncNow()
       const s = await googleGetStatus()
       setGoogleStatus(s)
+      if (r.skipped) {
+        setGoogleMsg({ kind: 'ok', text: 'Ya había un sync en curso, esperá unos segundos.' })
+        return
+      }
       const total =
         r.pushed.created +
         r.pushed.updated +

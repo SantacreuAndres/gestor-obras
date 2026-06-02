@@ -110,6 +110,8 @@ export interface GoogleEvent {
     useDefault?: boolean
     overrides?: { method: 'popup' | 'email'; minutes: number }[]
   }
+  recurrence?: string[]
+  recurringEventId?: string
   updated?: string
   etag?: string
 }

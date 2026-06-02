@@ -20,7 +20,10 @@ interface SyncState {
   access_token_expires_at: string | null
   sync_token: string | null
   calendar_id: string
+  syncing_at: string | null
 }
+
+const LOCK_TTL_MS = 3 * 60 * 1000
 
 interface MappingRow {
   user_id: string
@@ -36,6 +39,7 @@ interface SyncResult {
   pulled: { created: number; updated: number; deleted: number }
   resetSyncToken: boolean
   errors: string[]
+  skipped?: string
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -69,7 +73,6 @@ async function syncForUser(userId: string): Promise<SyncResult> {
   if (stateErr) throw stateErr
   if (!stateRow) throw new Error('Google Calendar not connected for this user')
   const state = stateRow as SyncState
-  const accessToken = await ensureAccessToken(state)
 
   const result: SyncResult = {
     pushed: { created: 0, updated: 0, deleted: 0 },
@@ -78,35 +81,69 @@ async function syncForUser(userId: string): Promise<SyncResult> {
     errors: [],
   }
 
-  // Step 1 — Pull from Google first. If we did a push and then immediately listed,
-  // we would see our own writes again. By pulling first, we record those Google IDs
-  // we already know about (no-ops via etag/updated check).
+  // Acquire the per-user lock. Concurrent syncs (e.g. Mac + iPhone, or several
+  // client triggers firing at once) were the root cause of the duplication
+  // loop, so only one may run at a time. Degrades gracefully if the syncing_at
+  // column (migration 0006) is not present yet — proceeds without the lock.
+  let lockAcquired = false
   try {
-    await pullFromGoogle(userId, state, accessToken, result)
-  } catch (e) {
-    if ((e as Error).message.includes('410')) {
-      // syncToken expired — clear and re-pull from scratch next time
-      await supabase
-        .from('google_sync_state')
-        .update({ sync_token: null })
-        .eq('user_id', userId)
-      result.resetSyncToken = true
-      result.errors.push('sync_token_expired_will_reset')
-    } else {
-      throw e
+    const staleBefore = new Date(Date.now() - LOCK_TTL_MS).toISOString()
+    const { data: locked, error: lockErr } = await supabase
+      .from('google_sync_state')
+      .update({ syncing_at: new Date().toISOString() })
+      .eq('user_id', userId)
+      .or(`syncing_at.is.null,syncing_at.lt.${staleBefore}`)
+      .select('user_id')
+    if (lockErr) throw lockErr
+    if (!locked || locked.length === 0) {
+      result.skipped = 'already_syncing'
+      return result
     }
+    lockAcquired = true
+  } catch (e) {
+    console.warn('sync lock unavailable, proceeding without it:', (e as Error).message)
   }
 
-  // Step 2 — Push local changes to Google
-  await pushToGoogle(userId, state, accessToken, result)
+  try {
+    const accessToken = await ensureAccessToken(state)
 
-  await supabase
-    .from('google_sync_state')
-    .update({
-      last_sync_at: new Date().toISOString(),
-      last_sync_error: result.errors.length ? result.errors.join('; ') : null,
-    })
-    .eq('user_id', userId)
+    // Step 1 — Pull from Google first, then push. Pulling first means push sees
+    // an up-to-date mapping table and won't re-create just-pulled events.
+    try {
+      await pullFromGoogle(userId, state, accessToken, result)
+    } catch (e) {
+      if ((e as Error).message.includes('410')) {
+        // syncToken expired — clear and re-pull from scratch next time
+        await supabase
+          .from('google_sync_state')
+          .update({ sync_token: null })
+          .eq('user_id', userId)
+        result.resetSyncToken = true
+        result.errors.push('sync_token_expired_will_reset')
+      } else {
+        throw e
+      }
+    }
+
+    // Step 2 — Push local changes to Google
+    await pushToGoogle(userId, state, accessToken, result)
+
+    await supabase
+      .from('google_sync_state')
+      .update({
+        last_sync_at: new Date().toISOString(),
+        last_sync_error: result.errors.length ? result.errors.join('; ') : null,
+      })
+      .eq('user_id', userId)
+  } finally {
+    // Always release the lock, even if the sync threw.
+    if (lockAcquired) {
+      await supabase
+        .from('google_sync_state')
+        .update({ syncing_at: null })
+        .eq('user_id', userId)
+    }
+  }
 
   return result
 }
@@ -152,6 +189,13 @@ async function pullFromGoogle(
         : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
     })
     for (const g of page.items) {
+      // Skip recurring events and their expanded instances. A single yearly
+      // birthday otherwise imports as 30+ separate local events, and pushing
+      // those back to Google was the seed of the duplication storm. Work events
+      // created in the app/Apple Calendar are non-recurring, which is what we sync.
+      const isRecurring = !!g.recurrence || !!g.recurringEventId
+      if (isRecurring) continue
+
       const { data: mapping } = await supabase
         .from('google_event_mapping')
         .select('*')
@@ -174,6 +218,7 @@ async function pullFromGoogle(
         continue
       }
       const local = googleToLocal(g, userId)
+      const now = new Date().toISOString()
       if (mapping?.local_id) {
         // Update existing local event
         const { error: updErr } = await supabase
@@ -184,7 +229,7 @@ async function pullFromGoogle(
             event_date: local.event_date,
             event_time: local.event_time,
             reminder_minutes: local.reminder_minutes,
-            updated_at: new Date().toISOString(),
+            updated_at: now,
           })
           .eq('id', mapping.local_id)
         if (updErr) {
@@ -195,8 +240,10 @@ async function pullFromGoogle(
           .from('google_event_mapping')
           .update({
             google_etag: g.etag ?? null,
-            last_synced_local_updated_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
+            // Match the row's updated_at exactly so the subsequent push does not
+            // see this as a local change and patch it straight back to Google.
+            last_synced_local_updated_at: now,
+            updated_at: now,
           })
           .eq('user_id', userId)
           .eq('google_event_id', g.id)
@@ -204,7 +251,7 @@ async function pullFromGoogle(
       } else {
         // Create local event
         const newId = crypto.randomUUID()
-        const { error: insErr } = await supabase
+        const { data: inserted, error: insErr } = await supabase
           .from('calendar_events')
           .insert({
             id: newId,
@@ -215,17 +262,28 @@ async function pullFromGoogle(
             event_time: local.event_time,
             reminder_minutes: local.reminder_minutes,
           })
+          .select('updated_at')
+          .single()
         if (insErr) {
           result.errors.push(`create local from google ${g.id}: ${insErr.message}`)
           continue
         }
-        await supabase.from('google_event_mapping').insert({
-          user_id: userId,
-          google_event_id: g.id,
-          local_id: newId,
-          google_etag: g.etag ?? null,
-          last_synced_local_updated_at: new Date().toISOString(),
-        })
+        const { error: mapErr } = await supabase
+          .from('google_event_mapping')
+          .insert({
+            user_id: userId,
+            google_event_id: g.id,
+            local_id: newId,
+            google_etag: g.etag ?? null,
+            last_synced_local_updated_at: inserted.updated_at ?? now,
+          })
+        if (mapErr) {
+          // A concurrent sync already mapped this Google event. Roll back the
+          // local row we just created so it never becomes an unmapped orphan
+          // that push would echo back to Google as a new event.
+          await supabase.from('calendar_events').delete().eq('id', newId)
+          continue
+        }
         result.pulled.created++
       }
     }

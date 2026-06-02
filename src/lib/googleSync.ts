@@ -13,6 +13,7 @@ export interface SyncResult {
   pulled: { created: number; updated: number; deleted: number }
   resetSyncToken: boolean
   errors: string[]
+  skipped?: string
 }
 
 async function authHeaders(): Promise<HeadersInit> {
