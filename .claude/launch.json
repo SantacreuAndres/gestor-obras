@@ -5,8 +5,7 @@
       "name": "vite",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 5173,
-      "cwd": "/Users/bruno/Desktop/gestor-obras"
+      "port": 5173
     }
   ]
 }

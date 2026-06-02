@@ -8,6 +8,8 @@ import {
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 
+const ALLOWED_EMAIL = 'santacreu.andres@gmail.com'
+
 interface AuthState {
   session: Session | null
   user: User | null
@@ -20,51 +22,33 @@ const AuthCtx = createContext<AuthState>({
   loading: true,
 })
 
+function isAllowed(session: Session | null): boolean {
+  return session?.user?.email?.toLowerCase() === ALLOWED_EMAIL
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const { data } = await supabase.auth.getSession()
-
-        // Si no hay sesión, usar un usuario fijo compartido
-        if (!data.session) {
-          const { data: userData, error } = await supabase.auth.signInWithPassword({
-            email: 'user@gestor-obras.local',
-            password: 'gestor-obras-2024'
-          })
-
-          // Si el usuario no existe, intentar crearlo
-          if (error?.message?.includes('Invalid login credentials')) {
-            const { data: signupData, error: signupError } = await supabase.auth.signUp({
-              email: 'user@gestor-obras.local',
-              password: 'gestor-obras-2024'
-            })
-            if (signupError) throw signupError
-            setSession(signupData.session)
-          } else if (error) {
-            throw error
-          } else {
-            setSession(userData.session)
-          }
-        } else {
-          setSession(data.session)
-        }
-      } catch (err) {
-        console.error('Auth init error:', err)
-      } finally {
-        setLoading(false)
+    supabase.auth.getSession().then(({ data }) => {
+      if (isAllowed(data.session)) {
+        setSession(data.session)
+      } else if (data.session) {
+        supabase.auth.signOut()
       }
-    }
-
-    initAuth()
+      setLoading(false)
+    })
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession)
+      if (isAllowed(newSession)) {
+        setSession(newSession)
+      } else {
+        setSession(null)
+        if (newSession) supabase.auth.signOut()
+      }
     })
 
     return () => {
