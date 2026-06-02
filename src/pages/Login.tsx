@@ -9,7 +9,8 @@ export function Login() {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
-  async function entrar() {
+  async function entrar(ev?: React.FormEvent) {
+    ev?.preventDefault()
     const e = email.trim().toLowerCase()
     const p = password
     if (!e || !p) return
@@ -42,27 +43,32 @@ export function Login() {
         <h1 style={{ margin: 0 }}>Gestor de Obras</h1>
       </div>
 
-      <div className="card">
+      <form
+        className="card"
+        method="post"
+        action="#"
+        onSubmit={entrar}
+        autoComplete="on"
+      >
         <p className="text-sm text-soft">
           Acceso restringido. Ingresá tu email y contraseña.
         </p>
 
         <div className="field">
-          <label className="field-label">Email</label>
+          <label className="field-label" htmlFor="login-email">Email</label>
           <div className="input" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px' }}>
             <Mail size={16} color="var(--c-text-muted)" />
             <input
+              id="login-email"
+              name="email"
               type="email"
               inputMode="email"
               autoCapitalize="off"
               autoCorrect="off"
-              autoComplete="email"
+              autoComplete="username"
               placeholder="vos@ejemplo.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') entrar()
-              }}
               style={{
                 border: 0,
                 outline: 'none',
@@ -76,18 +82,17 @@ export function Login() {
         </div>
 
         <div className="field">
-          <label className="field-label">Contraseña</label>
+          <label className="field-label" htmlFor="login-password">Contraseña</label>
           <div className="input" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px' }}>
             <KeyRound size={16} color="var(--c-text-muted)" />
             <input
+              id="login-password"
+              name="password"
               type={showPwd ? 'text' : 'password'}
               autoComplete="current-password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') entrar()
-              }}
               style={{
                 border: 0,
                 outline: 'none',
@@ -116,14 +121,14 @@ export function Login() {
         </div>
 
         <button
+          type="submit"
           className="btn btn-primary"
-          onClick={entrar}
           disabled={busy || !email.includes('@') || password.length < 1}
           style={{ width: '100%' }}
         >
           {busy ? 'Entrando…' : 'Entrar'}
         </button>
-      </div>
+      </form>
 
       {err && (
         <div
