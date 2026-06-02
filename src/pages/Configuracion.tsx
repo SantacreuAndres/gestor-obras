@@ -82,7 +82,9 @@ export function Configuracion() {
       await googleStartConnect()
     } catch (e) {
       setGoogleBusy(false)
-      setGoogleMsg({ kind: 'err', text: (e as Error).message })
+      const msg = (e as Error).message
+      setGoogleMsg({ kind: 'err', text: msg })
+      alert(`No pude iniciar la conexión con Google:\n\n${msg}`)
     }
   }
 

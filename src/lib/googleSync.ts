@@ -31,9 +31,17 @@ export async function getStatus(): Promise<GoogleStatus> {
 }
 
 export async function startConnect(): Promise<void> {
-  const { data } = await supabase.auth.getSession()
-  const token = data.session?.access_token
-  if (!token) throw new Error('No active session')
+  // Force refresh in case the cached access_token has expired — otherwise the
+  // server-side getUser(token) check on /api/google/auth would reject it and
+  // the user would see the raw 401 JSON.
+  const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession()
+  let token = refreshed?.session?.access_token
+  if (refreshErr || !token) {
+    const { data } = await supabase.auth.getSession()
+    token = data.session?.access_token
+  }
+  if (!token) throw new Error('No active session — relogueate y volvé a intentar.')
+  console.log('[googleSync] starting OAuth with token len', token.length)
   // Top-level navigation: the server cannot read the Authorization header here,
   // so we pass the token via query string. It stays in the URL only until the
   // immediate 302 to Google, where it is replaced by the OAuth state.
