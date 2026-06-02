@@ -3,6 +3,7 @@ import dayjs from 'dayjs'
 import { useCalendarEvents } from '../hooks/useCalendarEvents'
 import { calendarApi } from '../db/api'
 import type { CalendarEvent } from '../db/schema'
+import { CalendarSetup } from '../components/CalendarSetup'
 import '../styles/calendar.css'
 
 export function CalendarPage() {
@@ -124,6 +125,8 @@ export function CalendarPage() {
 
   return (
     <div className="page">
+      <CalendarSetup onReady={() => {}} />
+
       <div className="calendar-header">
         <h1>📅 Calendario</h1>
         <button onClick={handleRequestNotification} className="btn-secondary">
