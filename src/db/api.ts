@@ -416,10 +416,17 @@ export const calendarApi = {
         .order('event_time', { ascending: true, nullsFirst: true }),
     ),
 
-  put: async (e: CalendarEvent): Promise<CalendarEvent> =>
-    unwrap<CalendarEvent>(
-      await supabase.from('calendar_events').upsert(toDb(e)).select().single(),
-    ),
+  put: async (e: CalendarEvent): Promise<CalendarEvent> => {
+    // The UI builds events with userId: '' as a placeholder, but the column is
+    // a UUID — an empty string throws "invalid input syntax for type uuid" and
+    // the event silently falls back to localStorage (so it never syncs to
+    // Google). Always stamp the authenticated user's id here.
+    const { data: sess } = await supabase.auth.getSession()
+    const payload = { ...e, userId: sess.session?.user?.id ?? null }
+    return unwrap<CalendarEvent>(
+      await supabase.from('calendar_events').upsert(toDb(payload)).select().single(),
+    )
+  },
 
   update: async (id: string, patch: Partial<CalendarEvent>): Promise<void> => {
     const { error } = await supabase

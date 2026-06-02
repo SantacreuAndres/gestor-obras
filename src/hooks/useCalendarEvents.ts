@@ -18,11 +18,6 @@ export function useCalendarEvents() {
         setEvents(data)
         setUsingLocalStorage(false)
 
-        // Si no hay eventos, crear uno de ejemplo
-        if (data.length === 0) {
-          await createExampleEvent()
-        }
-
         // Suscribirse a cambios en realtime
         subscribeToChanges()
 
@@ -32,13 +27,7 @@ export function useCalendarEvents() {
         // Si falla Supabase, usar localStorage
         console.warn('Using local storage for calendar:', err)
         setUsingLocalStorage(true)
-
-        const localEvents = calendarStorage.getAll()
-        setEvents(localEvents)
-
-        if (localEvents.length === 0) {
-          await createExampleEventLocally()
-        }
+        setEvents(calendarStorage.getAll())
       } finally {
         setLoading(false)
       }
@@ -46,48 +35,6 @@ export function useCalendarEvents() {
 
     loadEvents()
   }, [])
-
-  const createExampleEvent = async () => {
-    const today = new Date()
-    const exampleEvent: CalendarEvent = {
-      id: crypto.randomUUID(),
-      userId: '',
-      title: '📅 Mi primer evento',
-      description: 'Este es un evento de ejemplo. Puedes editarlo o borrarlo.',
-      eventDate: today.toISOString().split('T')[0],
-      eventTime: '14:00',
-      reminderMinutes: 30,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-
-    try {
-      await calendarApi.put(exampleEvent)
-      setEvents([exampleEvent])
-    } catch (err) {
-      console.warn('Could not create example event in Supabase:', err)
-      calendarStorage.add(exampleEvent)
-      setEvents([exampleEvent])
-    }
-  }
-
-  const createExampleEventLocally = () => {
-    const today = new Date()
-    const exampleEvent: CalendarEvent = {
-      id: crypto.randomUUID(),
-      userId: '',
-      title: '📅 Mi primer evento',
-      description: 'Este es un evento de ejemplo. Puedes editarlo o borrarlo.',
-      eventDate: today.toISOString().split('T')[0],
-      eventTime: '14:00',
-      reminderMinutes: 30,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-
-    calendarStorage.add(exampleEvent)
-    setEvents([exampleEvent])
-  }
 
   const subscribeToChanges = () => {
     const subscription = supabase

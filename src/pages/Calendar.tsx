@@ -15,7 +15,6 @@ export function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [showEventsList, setShowEventsList] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -40,6 +39,20 @@ export function CalendarPage() {
       map[e.eventDate].push(e)
     })
     return map
+  }, [events])
+
+  // Lista liviana: solo eventos de hoy a +31 días, ordenados. Evita arrastrar
+  // todo el historial (y eventos lejanos como cumpleaños anuales).
+  const upcomingEvents = useMemo(() => {
+    const today = dayjs().format('YYYY-MM-DD')
+    const limit = dayjs().add(31, 'day').format('YYYY-MM-DD')
+    return events
+      .filter((e) => e.eventDate >= today && e.eventDate <= limit)
+      .sort((a, b) =>
+        a.eventDate === b.eventDate
+          ? (a.eventTime || '').localeCompare(b.eventTime || '')
+          : a.eventDate.localeCompare(b.eventDate),
+      )
   }, [events])
 
   const handlePrevMonth = () => setCurrentDate(currentDate.subtract(1, 'month'))
@@ -183,14 +196,6 @@ export function CalendarPage() {
             <button onClick={handleRequestNotification} className="btn-secondary">
               🔔 Notificaciones
             </button>
-            <button
-              onClick={() => setShowEventsList(!showEventsList)}
-              className="btn-secondary"
-              style={{ display: 'none' }}
-              id="mobile-events-btn"
-            >
-              📋 Eventos
-            </button>
           </div>
         </div>
 
@@ -319,109 +324,49 @@ export function CalendarPage() {
         </div>
       )}
 
-      {/* Panel lateral con todos los eventos (Desktop) */}
+      {/* Lista de próximos eventos (full-width, visible en todos los tamaños) */}
       <div className="events-panel-desktop">
         <div className="sidebar-header">
-          <h3>📋 Todos los eventos</h3>
+          <h3>📋 Próximos 30 días</h3>
         </div>
 
         <div className="events-list">
-          {events.length === 0 ? (
-            <p className="text-soft">Sin eventos aún</p>
+          {upcomingEvents.length === 0 ? (
+            <p className="text-soft">Sin eventos en los próximos 30 días</p>
           ) : (
-            events
-              .sort((a, b) => a.eventDate.localeCompare(b.eventDate))
-              .map((event) => (
-                <div key={event.id} className="event-card">
-                  <div className="event-time">
-                    {event.eventDate}
-                    {event.eventTime && ` • ${event.eventTime}`}
-                  </div>
-                  <div className="event-title">{event.title}</div>
-                  {event.description && (
-                    <div className="event-description">{event.description.substring(0, 50)}...</div>
-                  )}
-                  {event.reminderMinutes && (
-                    <div className="event-reminder">
-                      🔔 {event.reminderMinutes} min
-                    </div>
-                  )}
-                  <div className="event-actions">
-                    <button
-                      onClick={() => handleEditEvent(event)}
-                      className="btn-secondary small"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDeleteEvent(event.id)}
-                      className="btn-danger small"
-                    >
-                      Eliminar
-                    </button>
-                  </div>
+            upcomingEvents.map((event) => (
+              <div key={event.id} className="event-card">
+                <div className="event-time">
+                  {dayjs(event.eventDate).format('ddd D MMM')}
+                  {event.eventTime && ` • ${event.eventTime.slice(0, 5)}`}
                 </div>
-              ))
+                <div className="event-title">{event.title}</div>
+                {event.description && (
+                  <div className="event-description">{event.description.substring(0, 80)}</div>
+                )}
+                {event.reminderMinutes ? (
+                  <div className="event-reminder">🔔 {event.reminderMinutes} min</div>
+                ) : null}
+                <div className="event-actions">
+                  <button
+                    onClick={() => handleEditEvent(event)}
+                    className="btn-secondary small"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => handleDeleteEvent(event.id)}
+                    className="btn-danger small"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            ))
           )}
         </div>
       </div>
 
-      {/* Modal de eventos para Mobile */}
-      {showEventsList && (
-        <div className="modal-overlay" onClick={() => setShowEventsList(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>📋 Todos los eventos</h2>
-
-            <div className="events-list">
-              {events.length === 0 ? (
-                <p className="text-soft">Sin eventos aún</p>
-              ) : (
-                events
-                  .sort((a, b) => a.eventDate.localeCompare(b.eventDate))
-                  .map((event) => (
-                    <div key={event.id} className="event-card">
-                      <div className="event-time">
-                        {event.eventDate}
-                        {event.eventTime && ` • ${event.eventTime}`}
-                      </div>
-                      <div className="event-title">{event.title}</div>
-                      {event.description && (
-                        <div className="event-description">{event.description}</div>
-                      )}
-                      {event.reminderMinutes && (
-                        <div className="event-reminder">
-                          🔔 {event.reminderMinutes} min
-                        </div>
-                      )}
-                      <div className="event-actions">
-                        <button
-                          onClick={() => handleEditEvent(event)}
-                          className="btn-secondary small"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => handleDeleteEvent(event.id)}
-                          className="btn-danger small"
-                        >
-                          Eliminar
-                        </button>
-                      </div>
-                    </div>
-                  ))
-              )}
-            </div>
-
-            <button
-              onClick={() => setShowEventsList(false)}
-              className="btn-secondary"
-              style={{ marginTop: '1rem', width: '100%' }}
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Lista de eventos del día seleccionado */}
       {selectedDate && !showForm && (
