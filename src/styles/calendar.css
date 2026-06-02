@@ -480,34 +480,107 @@
 }
 
 @media (max-width: 480px) {
-  .calendar-day {
-    min-height: 70px;
-    padding: 0.4rem;
+  .page {
+    padding: 16px 8px 100px;
   }
 
-  .day-events {
-    gap: 0.2rem;
-    margin-top: 0.25rem;
+  .calendar-container {
+    padding: 0.75rem;
+    margin-bottom: 1rem;
   }
 
-  .event-badge {
-    font-size: 0.6rem;
-    padding: 0.15rem 0.3rem;
+  .calendar-header {
+    margin-bottom: 1rem;
+  }
+
+  .calendar-header h1 {
+    font-size: 1.25rem;
   }
 
   .month-nav {
     margin-bottom: 1rem;
+    gap: 0.5rem;
   }
 
   .month-nav h2 {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
+  }
+
+  .month-nav button {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .calendar-grid {
+    gap: 0;
+  }
+
+  .calendar-day {
+    min-height: 60px;
+    padding: 0.3rem;
+    font-size: 0.8rem;
+  }
+
+  .day-number {
+    font-size: 0.7rem;
+  }
+
+  .day-events {
+    gap: 0.2rem;
+    margin-top: 0.2rem;
+  }
+
+  .event-badge {
+    font-size: 0.55rem;
+    padding: 0.15rem 0.25rem;
   }
 
   .modal {
     padding: 1rem;
+    border-radius: 0;
+    max-height: calc(100vh - 40px);
+  }
+
+  .modal h2 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+  }
+
+  .form-group {
+    margin-bottom: 0.75rem;
   }
 
   .form-group label {
     font-size: 0.9rem;
+  }
+
+  .form-group input,
+  .form-group textarea,
+  .form-group select {
+    padding: 0.75rem;
+    font-size: 0.95rem;
+  }
+
+  .form-actions {
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .form-actions button {
+    padding: 0.7rem;
+    font-size: 0.9rem;
+  }
+
+  .events-sidebar {
+    margin-top: 0.5rem;
+  }
+
+  .sidebar-header h3 {
+    font-size: 0.95rem;
+  }
+
+  .calendar-day-header {
+    padding: 0.75rem 0.25rem;
+    font-size: 0.75rem;
   }
 }
