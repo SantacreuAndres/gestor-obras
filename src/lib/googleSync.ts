@@ -49,6 +49,26 @@ export async function startConnect(): Promise<void> {
   window.location.href = `/api/google/auth?token=${encodeURIComponent(token)}`
 }
 
+/**
+ * Removes an event from Google Calendar before it is deleted locally.
+ * Best-effort and never throws: no-op if Google is not connected. Must run
+ * before the local row is deleted so the mapping is still resolvable.
+ */
+export async function deleteFromGoogle(localId: string): Promise<void> {
+  try {
+    await fetch('/api/google/delete-event', {
+      method: 'POST',
+      headers: {
+        ...(await authHeaders()),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ localId }),
+    })
+  } catch (e) {
+    console.warn('deleteFromGoogle failed:', e)
+  }
+}
+
 export async function disconnect(): Promise<void> {
   const r = await fetch('/api/google/disconnect', {
     method: 'POST',

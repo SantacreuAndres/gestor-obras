@@ -5,7 +5,7 @@ import { calendarApi } from '../db/api'
 import { calendarStorage } from '../lib/calendarStorage'
 import type { CalendarEvent } from '../db/schema'
 import { CalendarSetup } from '../components/CalendarSetup'
-import { triggerBackgroundSync } from '../lib/googleSync'
+import { triggerBackgroundSync, deleteFromGoogle } from '../lib/googleSync'
 import '../styles/calendar.css'
 
 export function CalendarPage() {
@@ -125,6 +125,11 @@ export function CalendarPage() {
   const handleDeleteEvent = async (id: string) => {
     if (!window.confirm('¿Eliminar este evento?')) return
     try {
+      // Remove from Google FIRST, while the mapping is still resolvable. The
+      // mapping cascade-deletes with the local row on some schema versions, so
+      // deleting locally first would orphan the Google event.
+      await deleteFromGoogle(id)
+
       try {
         await calendarApi.delete(id)
       } catch (supabaseErr) {
@@ -136,9 +141,6 @@ export function CalendarPage() {
       // Actualizar estado local
       setEvents((prev) => prev.filter((e) => e.id !== id))
       alert('✅ Evento eliminado')
-
-      // Propagar borrado a Google Calendar si está conectado (fire-and-forget)
-      void triggerBackgroundSync()
     } catch (err) {
       console.error('Error deleting event:', err)
       alert('Error al eliminar el evento')
