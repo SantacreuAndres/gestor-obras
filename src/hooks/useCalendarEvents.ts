@@ -12,6 +12,29 @@ export function useCalendarEvents() {
       try {
         const data = await calendarApi.list()
         setEvents(data)
+
+        // Si no hay eventos, crear uno de ejemplo
+        if (data.length === 0) {
+          const today = new Date()
+          const exampleEvent: CalendarEvent = {
+            id: crypto.randomUUID(),
+            userId: '',
+            title: '📅 Mi primer evento',
+            description: 'Este es un evento de ejemplo. Puedes editarlo o borrarlo.',
+            eventDate: today.toISOString().split('T')[0],
+            eventTime: '14:00',
+            reminderMinutes: 30,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }
+
+          try {
+            await calendarApi.put(exampleEvent)
+            setEvents([exampleEvent])
+          } catch (err) {
+            console.warn('Could not create example event:', err)
+          }
+        }
       } catch (err) {
         console.error('Error loading calendar events:', err)
       } finally {
