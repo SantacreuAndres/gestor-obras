@@ -68,12 +68,15 @@ export function CalendarPage() {
         updatedAt: new Date().toISOString(),
       }
 
-      // Intentar guardar en Supabase
+      // Guardar en Supabase (prioridad)
+      let savedToSupabase = false
       try {
         await calendarApi.put(newEvent)
+        savedToSupabase = true
+        console.log('✅ Evento guardado en Supabase')
       } catch (supabaseErr) {
-        // Si falla, guardar en localStorage
-        console.warn('Supabase not ready, saving to local storage:', supabaseErr)
+        // Si falla Supabase, intentar localStorage como fallback
+        console.warn('⚠️  Supabase no disponible, usando localStorage:', supabaseErr)
         calendarStorage.add(newEvent)
       }
 
@@ -82,6 +85,9 @@ export function CalendarPage() {
         const filtered = prev.filter((e) => e.id !== newEvent.id)
         return [...filtered, newEvent]
       })
+
+      // Mostrar dónde se guardó
+      const location = savedToSupabase ? '☁️ Supabase' : '📱 Almacenamiento local'
 
       // Si hay recordatorio y notificaciones están habilitadas, programar recordatorio
       if (formData.reminderMinutes && 'Notification' in window) {
@@ -92,8 +98,8 @@ export function CalendarPage() {
       setSelectedDate(null)
       setFormData({ title: '', description: '', eventTime: '', reminderMinutes: 0 })
 
-      // Mostrar confirmación
-      alert('✅ Evento guardado correctamente')
+      // Mostrar confirmación con ubicación
+      alert(`✅ Evento guardado correctamente\n\n${location}`)
     } catch (err) {
       console.error('Error saving event:', err)
       alert('❌ Error inesperado al guardar el evento')
