@@ -45,5 +45,6 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     strictPort: false,
+    allowedHosts: ['obscurity-request-justly.ngrok-free.dev', 'localhost', '127.0.0.1', '.loca.lt'],
   },
 })

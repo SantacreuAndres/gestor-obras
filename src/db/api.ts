@@ -12,6 +12,7 @@ import type {
   MovimientoPlata,
   FojaPeriodo,
   FojaItem,
+  CalendarEvent,
 } from './schema'
 
 // ============================================================
@@ -390,6 +391,49 @@ export const fojaItemsApi = {
     ),
   delete: async (id: string): Promise<void> => {
     const { error } = await supabase.from('foja_items').delete().eq('id', id)
+    if (error) throw error
+  },
+}
+
+// ============================================================
+// CALENDAR EVENTS
+// ============================================================
+export const calendarApi = {
+  list: async (): Promise<CalendarEvent[]> =>
+    unwrap<CalendarEvent[]>(
+      await supabase
+        .from('calendar_events')
+        .select('*')
+        .order('event_date', { ascending: true }),
+    ),
+
+  getByDate: async (date: string): Promise<CalendarEvent[]> =>
+    unwrap<CalendarEvent[]>(
+      await supabase
+        .from('calendar_events')
+        .select('*')
+        .eq('event_date', date)
+        .order('event_time', { ascending: true, nullsFirst: true }),
+    ),
+
+  put: async (e: CalendarEvent): Promise<CalendarEvent> =>
+    unwrap<CalendarEvent>(
+      await supabase.from('calendar_events').upsert(toDb(e)).select().single(),
+    ),
+
+  update: async (id: string, patch: Partial<CalendarEvent>): Promise<void> => {
+    const { error } = await supabase
+      .from('calendar_events')
+      .update(toDb(patch))
+      .eq('id', id)
+    if (error) throw error
+  },
+
+  delete: async (id: string): Promise<void> => {
+    const { error } = await supabase
+      .from('calendar_events')
+      .delete()
+      .eq('id', id)
     if (error) throw error
   },
 }

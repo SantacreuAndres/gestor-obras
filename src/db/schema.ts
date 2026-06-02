@@ -167,3 +167,15 @@ export interface FojaItem {
   medidoPeriodo: number
   acumuladoAnterior: number
 }
+
+export interface CalendarEvent {
+  id: string
+  userId: string
+  title: string
+  description?: string
+  eventDate: string
+  eventTime?: string
+  reminderMinutes?: number
+  createdAt: string
+  updatedAt: string
+}
