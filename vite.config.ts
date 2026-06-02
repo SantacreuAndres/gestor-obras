@@ -39,6 +39,10 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        // Do NOT let the SPA navigation fallback intercept server routes.
+        // Without this, requests to /api/* (Google OAuth start + callback) were
+        // served the cached index.html, dropping the user back on the home page.
+        navigateFallbackDenylist: [/^\/api\//],
       },
     }),
   ],
