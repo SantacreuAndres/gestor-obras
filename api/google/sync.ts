@@ -30,7 +30,9 @@ interface MappingRow {
   google_event_id: string
   local_id: string | null
   google_etag: string | null
-  last_synced_local_updated_at: string | null
+  // updated_at doubles as the "last synced" marker: it is always set to the
+  // local row's updated_at after a push/pull, so push compares it against the
+  // current local.updated_at to detect real local changes.
   updated_at: string
 }
 
@@ -240,9 +242,8 @@ async function pullFromGoogle(
           .from('google_event_mapping')
           .update({
             google_etag: g.etag ?? null,
-            // Match the row's updated_at exactly so the subsequent push does not
-            // see this as a local change and patch it straight back to Google.
-            last_synced_local_updated_at: now,
+            // Match the local row's updated_at exactly so the subsequent push
+            // does not see this as a local change and patch it back to Google.
             updated_at: now,
           })
           .eq('user_id', userId)
@@ -275,7 +276,7 @@ async function pullFromGoogle(
             google_event_id: g.id,
             local_id: newId,
             google_etag: g.etag ?? null,
-            last_synced_local_updated_at: inserted.updated_at ?? now,
+            updated_at: inserted.updated_at ?? now,
           })
         if (mapErr) {
           // A concurrent sync already mapped this Google event. Roll back the
@@ -334,13 +335,23 @@ async function pushToGoogle(
         state.calendar_id,
         localToGoogle(local),
       )
-      await supabase.from('google_event_mapping').insert({
-        user_id: userId,
-        google_event_id: g.id,
-        local_id: local.id,
-        google_etag: g.etag ?? null,
-        last_synced_local_updated_at: local.updated_at,
-      })
+      const { error: mapErr } = await supabase
+        .from('google_event_mapping')
+        .insert({
+          user_id: userId,
+          google_event_id: g.id,
+          local_id: local.id,
+          google_etag: g.etag ?? null,
+          updated_at: local.updated_at,
+        })
+      if (mapErr) {
+        // The mapping MUST persist; otherwise the next sync re-inserts the same
+        // event into Google and we duplicate forever. Roll back the Google event
+        // we just created and surface the error instead of silently looping.
+        await deleteEvent(accessToken, state.calendar_id, g.id)
+        result.errors.push(`push insert mapping ${local.id}: ${mapErr.message}`)
+        continue
+      }
       result.pushed.created++
     } catch (e) {
       result.errors.push(`push insert ${local.id}: ${(e as Error).message}`)
@@ -353,10 +364,10 @@ async function pushToGoogle(
     const local = localById.get(mapping.local_id)
     if (!local) continue
     const localUpdated = new Date(local.updated_at).getTime()
-    const lastSynced = mapping.last_synced_local_updated_at
-      ? new Date(mapping.last_synced_local_updated_at).getTime()
-      : 0
-    if (localUpdated <= lastSynced) continue
+    const lastSynced = mapping.updated_at ? new Date(mapping.updated_at).getTime() : 0
+    // Only patch if the local row changed meaningfully after the last sync.
+    // 1s margin absorbs sub-second clock differences between the two writes.
+    if (localUpdated <= lastSynced + 1000) continue
     try {
       const g = await patchEvent(
         accessToken,
@@ -368,8 +379,7 @@ async function pushToGoogle(
         .from('google_event_mapping')
         .update({
           google_etag: g.etag ?? null,
-          last_synced_local_updated_at: local.updated_at,
-          updated_at: new Date().toISOString(),
+          updated_at: local.updated_at,
         })
         .eq('user_id', userId)
         .eq('google_event_id', mapping.google_event_id)

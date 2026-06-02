@@ -32,7 +32,8 @@ CREATE TABLE IF NOT EXISTS public.google_event_mapping (
   google_event_id TEXT NOT NULL,
   local_id UUID,
   google_etag TEXT,
-  last_synced_local_updated_at TIMESTAMPTZ,
+  -- updated_at doubles as the "last synced" marker (set to the local row's
+  -- updated_at after each push/pull) so push can detect real local changes.
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (user_id, google_event_id)
 );
