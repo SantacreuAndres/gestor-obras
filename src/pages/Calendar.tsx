@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import dayjs from 'dayjs'
 import { useCalendarEvents } from '../hooks/useCalendarEvents'
 import { calendarApi } from '../db/api'
+import { calendarStorage } from '../lib/calendarStorage'
 import type { CalendarEvent } from '../db/schema'
 import { CalendarSetup } from '../components/CalendarSetup'
 import '../styles/calendar.css'
@@ -60,7 +61,14 @@ export function CalendarPage() {
         updatedAt: new Date().toISOString(),
       }
 
-      await calendarApi.put(newEvent)
+      // Intentar guardar en Supabase
+      try {
+        await calendarApi.put(newEvent)
+      } catch (supabaseErr) {
+        // Si falla, guardar en localStorage
+        console.warn('Supabase not ready, saving to local storage:', supabaseErr)
+        calendarStorage.add(newEvent)
+      }
 
       // Si hay recordatorio y notificaciones están habilitadas, programar recordatorio
       if (formData.reminderMinutes && 'Notification' in window) {
@@ -75,7 +83,7 @@ export function CalendarPage() {
       alert('✅ Evento guardado correctamente')
     } catch (err) {
       console.error('Error saving event:', err)
-      alert('Error al guardar el evento. Verifica que la tabla de calendario esté creada en Supabase.\n\nVe a Supabase Console → SQL Editor y ejecuta el SQL que está en el archivo init-db.mjs')
+      alert('❌ Error inesperado al guardar el evento')
     }
   }
 
@@ -94,7 +102,13 @@ export function CalendarPage() {
   const handleDeleteEvent = async (id: string) => {
     if (!window.confirm('¿Eliminar este evento?')) return
     try {
-      await calendarApi.delete(id)
+      try {
+        await calendarApi.delete(id)
+      } catch (supabaseErr) {
+        // Si falla Supabase, usar localStorage
+        console.warn('Deleting from local storage:', supabaseErr)
+        calendarStorage.delete(id)
+      }
     } catch (err) {
       console.error('Error deleting event:', err)
       alert('Error al eliminar el evento')
