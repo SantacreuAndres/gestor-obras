@@ -1,6 +1,0 @@
-{
-  "buildCommand": "echo 'Skipping build'",
-  "outputDirectory": "dist",
-  "ignoreCommand": "false",
-  "installCommand": "npm ci --omit=dev || npm install --omit=dev"
-}

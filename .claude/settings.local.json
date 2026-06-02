@@ -18,7 +18,8 @@
       "Bash(npx --version)",
       "Bash(node -e \"const j=require\\('/Users/andressantacreu/.claude.json'\\); console.log\\('top-level keys:', Object.keys\\(j\\).slice\\(0,30\\).join\\(', '\\)\\); console.log\\('has mcpServers?', 'mcpServers' in j\\);\")",
       "Bash(timeout 60 npx -y @supabase/mcp-server-supabase@latest --help)",
-      "Bash(npx -y @supabase/mcp-server-supabase@latest --help)"
+      "Bash(npx -y @supabase/mcp-server-supabase@latest --help)",
+      "Bash(curl -s -I https://gestor-obras-1qm7clld6-santacreu-andres-projects.vercel.app/)"
     ]
   }
 }

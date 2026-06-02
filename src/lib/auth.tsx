@@ -29,11 +29,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const { data } = await supabase.auth.getSession()
 
-        // Si no hay sesión, crear una anónima automáticamente
+        // Si no hay sesión, usar un usuario fijo compartido
         if (!data.session) {
-          const { data: anonData, error } = await supabase.auth.signInAnonymously()
-          if (error) throw error
-          setSession(anonData.session)
+          const { data: userData, error } = await supabase.auth.signInWithPassword({
+            email: 'user@gestor-obras.local',
+            password: 'gestor-obras-2024'
+          })
+
+          // Si el usuario no existe, intentar crearlo
+          if (error?.message?.includes('Invalid login credentials')) {
+            const { data: signupData, error: signupError } = await supabase.auth.signUp({
+              email: 'user@gestor-obras.local',
+              password: 'gestor-obras-2024'
+            })
+            if (signupError) throw signupError
+            setSession(signupData.session)
+          } else if (error) {
+            throw error
+          } else {
+            setSession(userData.session)
+          }
         } else {
           setSession(data.session)
         }
