@@ -170,7 +170,7 @@ export interface FojaItem {
 
 export interface CalendarEvent {
   id: string
-  userId: string
+  userId?: string | null
   title: string
   description?: string
   eventDate: string
