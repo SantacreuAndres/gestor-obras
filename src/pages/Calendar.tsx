@@ -5,6 +5,7 @@ import { calendarApi } from '../db/api'
 import { calendarStorage } from '../lib/calendarStorage'
 import type { CalendarEvent } from '../db/schema'
 import { CalendarSetup } from '../components/CalendarSetup'
+import { triggerBackgroundSync } from '../lib/googleSync'
 import '../styles/calendar.css'
 
 export function CalendarPage() {
@@ -100,6 +101,9 @@ export function CalendarPage() {
 
       // Mostrar confirmación con ubicación
       alert(`✅ Evento guardado correctamente\n\n${location}`)
+
+      // Empujar a Google Calendar si está conectado (fire-and-forget)
+      void triggerBackgroundSync()
     } catch (err) {
       console.error('Error saving event:', err)
       alert('❌ Error inesperado al guardar el evento')
@@ -132,6 +136,9 @@ export function CalendarPage() {
       // Actualizar estado local
       setEvents((prev) => prev.filter((e) => e.id !== id))
       alert('✅ Evento eliminado')
+
+      // Propagar borrado a Google Calendar si está conectado (fire-and-forget)
+      void triggerBackgroundSync()
     } catch (err) {
       console.error('Error deleting event:', err)
       alert('Error al eliminar el evento')

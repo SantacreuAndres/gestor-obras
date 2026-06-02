@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import type { CalendarEvent } from '../db/schema'
 import { calendarApi } from '../db/api'
 import { calendarStorage } from '../lib/calendarStorage'
+import { triggerBackgroundSync } from '../lib/googleSync'
 
 export function useCalendarEvents() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
@@ -24,6 +25,9 @@ export function useCalendarEvents() {
 
         // Suscribirse a cambios en realtime
         subscribeToChanges()
+
+        // Disparar sync con Google una vez al abrir el calendario (no bloquea)
+        void triggerBackgroundSync()
       } catch (err) {
         // Si falla Supabase, usar localStorage
         console.warn('Using local storage for calendar:', err)
