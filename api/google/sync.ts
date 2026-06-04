@@ -230,6 +230,7 @@ async function pullFromGoogle(
             description: local.description,
             event_date: local.event_date,
             event_time: local.event_time,
+            event_end_time: local.event_end_time,
             reminder_minutes: local.reminder_minutes,
             updated_at: now,
           })
@@ -261,6 +262,7 @@ async function pullFromGoogle(
             description: local.description,
             event_date: local.event_date,
             event_time: local.event_time,
+            event_end_time: local.event_end_time,
             reminder_minutes: local.reminder_minutes,
           })
           .select('updated_at')

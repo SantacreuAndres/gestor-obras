@@ -188,6 +188,8 @@ export interface PlannerTarea {
   obraId?: string | null
   fecha: string
   hora?: string | null
+  // If null and there is a hora, the task is treated as 1 hour long.
+  horaFin?: string | null
   titulo: string
   descripcion?: string | null
   estado: EstadoTarea
@@ -205,6 +207,8 @@ export interface CalendarEvent {
   description?: string
   eventDate: string
   eventTime?: string
+  // Optional end time; when absent, sync still falls back to start + 1h.
+  eventEndTime?: string
   reminderMinutes?: number
   createdAt: string
   updatedAt: string

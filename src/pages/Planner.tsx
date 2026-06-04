@@ -172,6 +172,7 @@ export function Planner() {
         description: t.descripcion ?? undefined,
         eventDate: t.fecha,
         eventTime: t.hora ?? undefined,
+        eventEndTime: t.horaFin ?? undefined,
         reminderMinutes: undefined,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -373,6 +374,7 @@ function TareaRow({
 }: TareaRowProps) {
   const [titulo, setTitulo] = useState(t.titulo)
   const [hora, setHora] = useState(t.hora ?? '')
+  const [horaFin, setHoraFin] = useState(t.horaFin ?? '')
   const [descripcion, setDescripcion] = useState(t.descripcion ?? '')
   const [showEstadoMenu, setShowEstadoMenu] = useState(false)
   const longPressTimerRef = useState<{ id: number | null }>({ id: null })[0]
@@ -380,8 +382,9 @@ function TareaRow({
   useEffect(() => {
     setTitulo(t.titulo)
     setHora(t.hora ?? '')
+    setHoraFin(t.horaFin ?? '')
     setDescripcion(t.descripcion ?? '')
-  }, [t.id, t.titulo, t.hora, t.descripcion])
+  }, [t.id, t.titulo, t.hora, t.horaFin, t.descripcion])
 
   async function guardarEdicion() {
     const newTitulo = titulo.trim()
@@ -393,6 +396,7 @@ function TareaRow({
       await plannerApi.update(t.id, {
         titulo: newTitulo,
         hora: hora || null,
+        horaFin: horaFin || null,
         descripcion: descripcion || null,
       })
       onStopEdit()
@@ -457,22 +461,31 @@ function TareaRow({
                   if (e.key === 'Escape') onStopEdit()
                 }}
               />
-              <div className="row gap-8">
+              <div className="row gap-8" style={{ flexWrap: 'wrap' }}>
                 <input
                   type="time"
                   className="input"
-                  style={{ width: 110 }}
+                  style={{ width: 100 }}
                   value={hora}
                   onChange={(e) => setHora(e.target.value)}
+                  aria-label="Hora inicio"
                 />
+                <span className="text-soft" style={{ alignSelf: 'center' }}>→</span>
                 <input
+                  type="time"
                   className="input"
-                  style={{ flex: 1 }}
-                  placeholder="Notas (opcional)"
-                  value={descripcion}
-                  onChange={(e) => setDescripcion(e.target.value)}
+                  style={{ width: 100 }}
+                  value={horaFin}
+                  onChange={(e) => setHoraFin(e.target.value)}
+                  aria-label="Hora fin"
                 />
               </div>
+              <input
+                className="input"
+                placeholder="Notas (opcional)"
+                value={descripcion}
+                onChange={(e) => setDescripcion(e.target.value)}
+              />
               <div className="row gap-8">
                 <button
                   className="btn btn-primary btn-sm"
@@ -498,6 +511,7 @@ function TareaRow({
               {(t.hora || t.descripcion) && (
                 <div className="text-sm text-soft">
                   {t.hora ? t.hora.slice(0, 5) : ''}
+                  {t.hora && t.horaFin ? `–${t.horaFin.slice(0, 5)}` : ''}
                   {t.hora && t.descripcion ? ' · ' : ''}
                   {t.descripcion ?? ''}
                 </div>
@@ -617,6 +631,7 @@ function Semaforo({
 function DraftRow({ fecha, onClose }: { fecha: string; onClose: () => void }) {
   const [titulo, setTitulo] = useState('')
   const [hora, setHora] = useState('')
+  const [horaFin, setHoraFin] = useState('')
   const [saving, setSaving] = useState(false)
 
   async function guardar() {
@@ -631,6 +646,7 @@ function DraftRow({ fecha, onClose }: { fecha: string; onClose: () => void }) {
         id: uid(),
         fecha,
         hora: hora || null,
+        horaFin: horaFin || null,
         titulo: t,
         estado: 'pendiente',
       })
@@ -665,14 +681,26 @@ function DraftRow({ fecha, onClose }: { fecha: string; onClose: () => void }) {
         }}
         disabled={saving}
       />
-      <div className="row gap-8">
+      <div className="row gap-8" style={{ flexWrap: 'wrap' }}>
         <input
           type="time"
           className="input"
-          style={{ width: 110 }}
+          style={{ width: 100 }}
           value={hora}
           onChange={(e) => setHora(e.target.value)}
           disabled={saving}
+          aria-label="Hora inicio"
+        />
+        <span className="text-soft" style={{ alignSelf: 'center' }}>→</span>
+        <input
+          type="time"
+          className="input"
+          style={{ width: 100 }}
+          value={horaFin}
+          onChange={(e) => setHoraFin(e.target.value)}
+          disabled={saving}
+          aria-label="Hora fin (opcional)"
+          placeholder="opcional"
         />
         <button
           className="btn btn-primary btn-sm"

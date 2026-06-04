@@ -9,6 +9,7 @@ export interface LocalEvent {
   description: string | null
   event_date: string
   event_time: string | null
+  event_end_time: string | null
   reminder_minutes: number | null
   created_at: string
   updated_at: string
@@ -19,10 +20,14 @@ export function localToGoogle(e: LocalEvent): Partial<GoogleEvent> {
   const start = allDay
     ? { date: e.event_date }
     : { dateTime: `${e.event_date}T${e.event_time!.slice(0, 8)}`, timeZone: TZ }
+  // Prefer the explicit end_time if set; otherwise default to start + 1h.
+  const endHHMMSS = e.event_end_time
+    ? e.event_end_time.slice(0, 8)
+    : addHour(e.event_time!.slice(0, 8))
   const end = allDay
     ? { date: addDay(e.event_date) }
     : {
-        dateTime: `${e.event_date}T${addHour(e.event_time!.slice(0, 8))}`,
+        dateTime: `${e.event_date}T${endHHMMSS}`,
         timeZone: TZ,
       }
   const reminders =
@@ -62,6 +67,11 @@ export function googleToLocal(
   } else {
     event_date = new Date().toISOString().slice(0, 10)
   }
+  const endDateTime = g.end?.dateTime
+  let event_end_time: string | null = null
+  if (endDateTime && startDateTime) {
+    event_end_time = endDateTime.slice(11, 19)
+  }
   const override = g.reminders?.overrides?.[0]
   return {
     id: g.id,
@@ -70,6 +80,7 @@ export function googleToLocal(
     description: g.description ?? null,
     event_date,
     event_time,
+    event_end_time,
     reminder_minutes: override ? override.minutes : null,
     updated_at: g.updated,
   }
