@@ -13,6 +13,7 @@ import type {
   FojaPeriodo,
   FojaItem,
   CalendarEvent,
+  PlannerTarea,
 } from './schema'
 
 // ============================================================
@@ -398,6 +399,43 @@ export const fojaItemsApi = {
 // ============================================================
 // CALENDAR EVENTS
 // ============================================================
+export const plannerApi = {
+  // Week range query: fecha BETWEEN start AND end (inclusive)
+  byRange: async (start: string, end: string): Promise<PlannerTarea[]> =>
+    unwrap<PlannerTarea[]>(
+      await supabase
+        .from('planner_tareas')
+        .select('*')
+        .gte('fecha', start)
+        .lte('fecha', end)
+        .order('fecha', { ascending: true })
+        .order('hora', { ascending: true, nullsFirst: true })
+        .order('created_at', { ascending: true }),
+    ),
+
+  add: async (t: PlannerTarea): Promise<PlannerTarea> => {
+    const { data: sess } = await supabase.auth.getSession()
+    const payload = { ...t, userId: sess.session?.user?.id ?? null }
+    return unwrap<PlannerTarea>(
+      await supabase.from('planner_tareas').insert(toDb(payload)).select().single(),
+    )
+  },
+
+  update: async (id: string, patch: Partial<PlannerTarea>): Promise<void> => {
+    const body = { ...patch, updatedAt: new Date().toISOString() }
+    const { error } = await supabase
+      .from('planner_tareas')
+      .update(toDb(body))
+      .eq('id', id)
+    if (error) throw error
+  },
+
+  delete: async (id: string): Promise<void> => {
+    const { error } = await supabase.from('planner_tareas').delete().eq('id', id)
+    if (error) throw error
+  },
+}
+
 export const calendarApi = {
   list: async (): Promise<CalendarEvent[]> =>
     unwrap<CalendarEvent[]>(

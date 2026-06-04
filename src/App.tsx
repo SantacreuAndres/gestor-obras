@@ -5,6 +5,7 @@ import { ObraDetail } from './pages/ObraDetail'
 import { Contactos } from './pages/Contactos'
 import { Configuracion } from './pages/Configuracion'
 import { CalendarPage } from './pages/Calendar'
+import { Planner } from './pages/Planner'
 import { Datos } from './pages/obra/Datos'
 import { Notas } from './pages/obra/Notas'
 import { Deadlines } from './pages/obra/Deadlines'
@@ -55,6 +56,7 @@ export default function App() {
           <Route path="plata" element={<Plata />} />
           <Route path="medicion" element={<Medicion />} />
         </Route>
+        <Route path="/planner" element={<Planner />} />
         <Route path="/calendario" element={<CalendarPage />} />
         <Route path="/contactos" element={<Contactos />} />
         <Route path="/config" element={<Configuracion />} />

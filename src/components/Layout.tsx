@@ -1,8 +1,9 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Building2, Users, Settings, HardHat, Calendar } from 'lucide-react'
+import { Building2, Users, Settings, HardHat, Calendar, ListChecks } from 'lucide-react'
 
 const NAV = [
   { to: '/obras', label: 'Obras', icon: Building2 },
+  { to: '/planner', label: 'Planner', icon: ListChecks },
   { to: '/calendario', label: 'Calendario', icon: Calendar },
   { to: '/contactos', label: 'Contactos', icon: Users },
   { to: '/config', label: 'Config', icon: Settings },

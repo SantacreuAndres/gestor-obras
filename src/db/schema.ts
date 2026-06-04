@@ -180,6 +180,24 @@ export interface FojaItem {
   acumuladoAnterior: number
 }
 
+export type EstadoTarea = 'pendiente' | 'progreso' | 'hecha'
+
+export interface PlannerTarea {
+  id: string
+  userId?: string | null
+  obraId?: string | null
+  fecha: string
+  hora?: string | null
+  titulo: string
+  descripcion?: string | null
+  estado: EstadoTarea
+  // Set when the task has been linked to the bidirectional calendar
+  // (calendar_events row id). Null = task only, not on the calendar.
+  calendarEventId?: string | null
+  createdAt?: string
+  updatedAt?: string
+}
+
 export interface CalendarEvent {
   id: string
   userId?: string | null
