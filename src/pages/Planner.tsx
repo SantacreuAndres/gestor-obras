@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import dayjs from 'dayjs'
 import isoWeek from 'dayjs/plugin/isoWeek'
 import {
@@ -197,8 +197,44 @@ export function Planner() {
 
   const labelSemana = `${weekStart.format('D MMM')} – ${weekEnd.format('D MMM YYYY')}`
 
+  // Horizontal swipe to navigate between weeks. Vertical scrolling stays
+  // untouched: we only react when the gesture is clearly horizontal.
+  const touchRef = useRef<{ x: number; y: number; t: number } | null>(null)
+  function onTouchStart(e: React.TouchEvent) {
+    const t = e.touches[0]
+    touchRef.current = { x: t.clientX, y: t.clientY, t: Date.now() }
+  }
+  function onTouchEnd(e: React.TouchEvent) {
+    const start = touchRef.current
+    touchRef.current = null
+    if (!start) return
+    const t = e.changedTouches[0]
+    const dx = t.clientX - start.x
+    const dy = t.clientY - start.y
+    const dt = Date.now() - start.t
+    // Require: mostly horizontal, > 60px, faster than ~1 sec, and not on a
+    // form control (so swiping inside an input doesn't change the week).
+    const target = e.target as HTMLElement
+    if (target.closest('input, textarea, button, select, audio, [contenteditable]')) {
+      return
+    }
+    if (Math.abs(dx) < 60) return
+    if (Math.abs(dx) < Math.abs(dy) * 1.5) return
+    if (dt > 800) return
+    if (dx < 0) {
+      setWeekStart(weekStart.add(1, 'week'))
+    } else {
+      setWeekStart(weekStart.subtract(1, 'week'))
+    }
+  }
+
   return (
-    <div className="page">
+    <div
+      className="page"
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      style={{ touchAction: 'pan-y' }}
+    >
       <div className="page-header">
         <div>
           <div className="page-title">Planner</div>

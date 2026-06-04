@@ -19,6 +19,7 @@ import { uid, nowIso } from '../../lib/ids'
 import { fmtDateLong } from '../../lib/format'
 import { EmptyState } from '../../components/EmptyState'
 import { BlobImage } from '../../components/BlobImage'
+import { PhotoViewer } from '../../components/PhotoViewer'
 import {
   uploadToBucket,
   getSignedUrl,
@@ -434,6 +435,7 @@ function NotaItem({
   onBorrar: () => void
 }) {
   const adjuntos = n.adjuntos ?? []
+  const [viewerPath, setViewerPath] = useState<string | null>(null)
 
   async function compartir() {
     try {
@@ -515,12 +517,14 @@ function NotaItem({
                 bucket="notas"
                 path={a.path}
                 alt=""
+                onClick={() => setViewerPath(a.path)}
                 style={{
                   width: 96,
                   height: 96,
                   objectFit: 'cover',
                   borderRadius: 6,
                   border: '1px solid var(--c-border)',
+                  cursor: 'pointer',
                 }}
               />
             ) : (
@@ -529,6 +533,11 @@ function NotaItem({
           )}
         </div>
       )}
+      <PhotoViewer
+        bucket="notas"
+        path={viewerPath}
+        onClose={() => setViewerPath(null)}
+      />
     </div>
   )
 }
