@@ -541,13 +541,15 @@ textarea { resize: vertical; }
   .tabbar {
     display: flex;
     position: fixed;
-    /* Sit the bar right above the iOS home indicator instead of stretching
-       into it. The HTML background is var(--c-bg-elev) so the safe-area zone
-       below the bar reads as a continuous extension of the tabbar surface. */
-    bottom: var(--safe-bottom);
+    /* Extend the bar all the way to the bottom edge of the screen so there is
+       no visible gap. The safe-area space stays painted in the tabbar color
+       (no white strip), and the items inside are constrained to the top 64px
+       so the icons are not in the iOS home-indicator gesture zone. */
+    bottom: 0;
     left: 0;
     right: 0;
-    height: var(--tabbar-h);
+    height: calc(var(--tabbar-h) + var(--safe-bottom));
+    padding-bottom: var(--safe-bottom);
     background: var(--c-bg-elev);
     border-top: 1px solid var(--c-border);
     z-index: 30;
@@ -564,6 +566,9 @@ textarea { resize: vertical; }
     font-size: 11px;
     font-weight: 500;
     padding: 4px 0;
+    /* Keep the touch target inside the content box (above the home indicator)
+       so iOS home-swipe doesn't conflict with the tap. */
+    height: var(--tabbar-h);
   }
   .tabbar-item.active { color: var(--c-accent); }
   .tabbar-item:hover { text-decoration: none; }
