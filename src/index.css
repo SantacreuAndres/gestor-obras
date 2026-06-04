@@ -541,11 +541,13 @@ textarea { resize: vertical; }
   .tabbar {
     display: flex;
     position: fixed;
-    bottom: 0;
+    /* Sit the bar right above the iOS home indicator instead of stretching
+       into it. The HTML background is var(--c-bg-elev) so the safe-area zone
+       below the bar reads as a continuous extension of the tabbar surface. */
+    bottom: var(--safe-bottom);
     left: 0;
     right: 0;
-    height: calc(var(--tabbar-h) + var(--safe-bottom));
-    padding-bottom: var(--safe-bottom);
+    height: var(--tabbar-h);
     background: var(--c-bg-elev);
     border-top: 1px solid var(--c-border);
     z-index: 30;
