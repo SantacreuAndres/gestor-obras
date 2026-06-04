@@ -161,9 +161,10 @@ export function Planner() {
       }
       return
     }
-    // Link: crear event en calendar_events y referenciarlo
+    // Link: crear event en calendar_events, referenciarlo desde la tarea, y
+    // si el segundo paso falla, hacer rollback borrando el evento huérfano.
+    const eventId = crypto.randomUUID()
     try {
-      const eventId = crypto.randomUUID()
       await calendarApi.put({
         id: eventId,
         userId: '', // calendarApi.put lo sobreescribe con la sesión real
@@ -175,16 +176,22 @@ export function Planner() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       })
-      await plannerApi.update(t.id, { calendarEventId: eventId })
-      setTareas((prev) =>
-        prev.map((x) =>
-          x.id === t.id ? { ...x, calendarEventId: eventId } : x,
-        ),
-      )
-      void triggerBackgroundSync()
     } catch (e) {
-      alert(`No pude vincular al calendario:\n${(e as Error).message}`)
+      alert(`No pude crear el evento:\n${(e as Error).message}`)
+      return
     }
+    try {
+      await plannerApi.update(t.id, { calendarEventId: eventId })
+    } catch (e) {
+      // Rollback: borrar el evento huérfano que acabamos de crear.
+      await calendarApi.delete(eventId).catch(() => {})
+      alert(`No pude vincular al calendario:\n${(e as Error).message}`)
+      return
+    }
+    setTareas((prev) =>
+      prev.map((x) => (x.id === t.id ? { ...x, calendarEventId: eventId } : x)),
+    )
+    void triggerBackgroundSync()
   }
 
   const labelSemana = `${weekStart.format('D MMM')} – ${weekEnd.format('D MMM YYYY')}`

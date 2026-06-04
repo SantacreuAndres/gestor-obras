@@ -423,11 +423,19 @@ export const plannerApi = {
 
   update: async (id: string, patch: Partial<PlannerTarea>): Promise<void> => {
     const body = { ...patch, updatedAt: new Date().toISOString() }
-    const { error } = await supabase
+    // Ask for the updated row so RLS silently rejecting becomes a thrown error
+    // instead of a no-op (otherwise calendar_event_id never gets persisted).
+    const { data, error } = await supabase
       .from('planner_tareas')
       .update(toDb(body))
       .eq('id', id)
+      .select('id')
     if (error) throw error
+    if (!data || data.length === 0) {
+      throw new Error(
+        'No se pudo actualizar la tarea (RLS rechazó la operación o la tarea ya no existe).',
+      )
+    }
   },
 
   delete: async (id: string): Promise<void> => {
