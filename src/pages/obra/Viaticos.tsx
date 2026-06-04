@@ -304,11 +304,14 @@ export function Viaticos() {
                   <Camera size={14} /> {uploading ? 'Subiendo…' : 'Sacar / elegir foto'}
                 </button>
               )}
+              {/* No 'capture' attribute on purpose: iOS Safari opens its native
+                  sheet with "Tomar foto", "Elegir foto" (galería) y "Elegir
+                  archivo". Forcing capture="environment" would skip the
+                  picker and open the camera directly. */}
               <input
                 ref={fileRef}
                 type="file"
                 accept="image/*"
-                capture="environment"
                 style={{ display: 'none' }}
                 onChange={onPickFile}
               />
