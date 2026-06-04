@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 
-export type Bucket = 'comprobantes' | 'fotos' | 'documentos'
+export type Bucket = 'comprobantes' | 'fotos' | 'documentos' | 'notas'
 
 /**
  * Sube un archivo al bucket indicado. Convención de path:

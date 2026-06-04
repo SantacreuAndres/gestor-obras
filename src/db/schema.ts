@@ -25,12 +25,24 @@ export interface Obra {
   updatedAt: string
 }
 
+export interface NotaAdjunto {
+  id: string
+  tipo: 'foto' | 'audio'
+  // Storage path in the 'notas' bucket: <userId>/<obraId>/<random>.<ext>
+  path: string
+  mime?: string
+  // Duration in seconds — set only for audio so the UI can show the length
+  // without instantiating an <audio> element to probe it.
+  duracion?: number
+}
+
 export interface Nota {
   id: string
   obraId: string
   fecha: string
   texto: string
   anclada: boolean
+  adjuntos?: NotaAdjunto[]
 }
 
 export type EstadoDeadline = 'pendiente' | 'cumplido'
