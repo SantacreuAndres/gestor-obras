@@ -5,7 +5,8 @@
 CREATE TABLE IF NOT EXISTS public.planner_tareas (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  obra_id UUID REFERENCES public.obras(id) ON DELETE SET NULL,
+  -- obras.id is TEXT (not UUID) in this project, so the FK column matches.
+  obra_id TEXT REFERENCES public.obras(id) ON DELETE SET NULL,
   fecha DATE NOT NULL,
   hora TIME,
   titulo TEXT NOT NULL,
