@@ -113,8 +113,18 @@ input,
 textarea,
 select {
   font-family: inherit;
-  font-size: inherit;
+  /* 16px on touch devices stops iOS Safari from auto-zooming when the input
+     is focused. Smaller sizes trigger an annoying zoom-and-pan that the user
+     then has to undo. Desktop keeps the 15px base font. */
+  font-size: 16px;
   color: inherit;
+}
+@media (min-width: 769px) {
+  input,
+  textarea,
+  select {
+    font-size: inherit;
+  }
 }
 
 textarea { resize: vertical; }
