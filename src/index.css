@@ -68,49 +68,27 @@ body,
 }
 
 body {
-  /* Layered background: two soft accent-tinted radial blobs sitting on top of
-     the base grey. background-attachment: fixed keeps them anchored to the
-     viewport so scrolling doesn't drag the gradient around. The blobs are very
-     low opacity so cards and text stay legible without an extra backdrop. */
-  background:
-    /* Complex warm "sunset" field built from several overlapping hues so it
-       reads as rich and layered rather than a flat orange. From bottom-right
-       deep crimson, up through coral, into golden amber, over a diagonal
-       peach→ember base. Fixed to the viewport so it doesn't scroll. */
-    radial-gradient(
-      120% 90% at 85% 100%,
-      rgba(198, 28, 18, 0.92) 0%,
-      rgba(255, 80, 30, 0.55) 34%,
-      rgba(255, 120, 50, 0) 72%
-    ),
-    radial-gradient(
-      85% 70% at 4% 52%,
-      rgba(255, 92, 120, 0.42) 0%,
-      rgba(255, 92, 120, 0) 66%
-    ),
-    radial-gradient(
-      120% 80% at 60% -5%,
-      rgba(255, 196, 96, 0.62) 0%,
-      rgba(255, 196, 96, 0) 70%
-    ),
-    linear-gradient(
-      158deg,
-      #ffe9d2 0%,
-      #ffd0ab 38%,
-      #ff9c66 72%,
-      #ef6536 100%
-    );
-  background-attachment: fixed;
-  background-repeat: no-repeat;
+  background: transparent;
   color: var(--c-text);
   overflow: hidden;
   overscroll-behavior: none;
 }
 
-/* Solid color behind the safe-area inset on iOS PWA, prevents a white band
-   appearing under the tabbar when the home indicator area shows through. */
+/* Soft, painterly aurora — multiple low-opacity colour blooms over a warm base.
+   Lives on <html> so it fills the ENTIRE screen, including behind the
+   (now translucent) status bar and under the home indicator. Fixed so it
+   doesn't drift while scrolling. Warm-dominant so the orange accents inside the
+   bubbles feel native, with lavender / rose / mint notes for the aurora depth. */
 html {
-  background: var(--c-bg-elev);
+  background:
+    radial-gradient(60% 50% at 12% 8%, rgba(255, 178, 120, 0.60) 0%, rgba(255, 178, 120, 0) 62%),
+    radial-gradient(58% 50% at 92% 6%, rgba(190, 150, 255, 0.42) 0%, rgba(190, 150, 255, 0) 60%),
+    radial-gradient(70% 58% at 88% 80%, rgba(255, 110, 80, 0.58) 0%, rgba(255, 110, 80, 0) 64%),
+    radial-gradient(66% 56% at 6% 92%, rgba(140, 215, 180, 0.38) 0%, rgba(140, 215, 180, 0) 64%),
+    radial-gradient(55% 48% at 50% 52%, rgba(255, 150, 110, 0.34) 0%, rgba(255, 150, 110, 0) 70%),
+    linear-gradient(158deg, #ffe9d8 0%, #ffd7c0 42%, #ffc2a4 100%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
 }
 
 h1,
@@ -191,8 +169,10 @@ textarea { resize: vertical; }
 .sidebar {
   width: var(--sidebar-w);
   flex: 0 0 var(--sidebar-w);
-  background: var(--c-bg-elev);
-  border-right: 1px solid var(--c-border);
+  background: rgba(255, 255, 255, 0.32);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  backdrop-filter: blur(30px) saturate(180%);
+  border-right: 1px solid rgba(255, 255, 255, 0.5);
   padding: calc(var(--safe-top) + 16px) 12px 16px;
   display: flex;
   flex-direction: column;
@@ -586,10 +566,16 @@ textarea { resize: vertical; }
   margin-bottom: 16px;
 }
 .kpi {
-  background: var(--c-bg-elev);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
+  /* Glass bubble, same language as .card. */
+  background: rgba(255, 255, 255, 0.30);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
   padding: 12px 14px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 6px 20px -12px rgba(140, 45, 12, 0.28);
 }
 .kpi-label {
   font-size: 0.75rem;
@@ -609,20 +595,27 @@ textarea { resize: vertical; }
     height: 100%;
   }
   .main-scroll {
-    padding-top: calc(var(--safe-top) + 4px);
-    padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 12px);
+    padding-top: calc(var(--safe-top) + 8px);
+    padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 28px);
   }
 
   .tabbar {
     display: flex;
     position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    /* Bar extends to the very bottom edge. */
-    height: calc(var(--tabbar-h) + var(--safe-bottom));
-    background: var(--c-bg-elev);
-    border-top: 1px solid var(--c-border);
+    /* Floating glass "bubble" pill, lifted above the home indicator with a
+       margin on each side instead of spanning edge to edge. */
+    left: 12px;
+    right: 12px;
+    bottom: calc(var(--safe-bottom) + 8px);
+    height: var(--tabbar-h);
+    border-radius: 26px;
+    background: rgba(255, 255, 255, 0.42);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    backdrop-filter: blur(30px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      0 10px 30px -10px rgba(120, 40, 10, 0.32);
     z-index: 30;
   }
   .tabbar-item {
@@ -630,17 +623,13 @@ textarea { resize: vertical; }
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* Anchor the icon+label to the bottom of the content box so they sit just
-       above the iOS home indicator instead of floating in the middle of the
-       bar. The safe-bottom padding keeps the tappable area clear of the
-       home-swipe gesture zone. */
-    justify-content: flex-end;
+    justify-content: center;
     gap: 2px;
     color: var(--c-text-soft);
     text-decoration: none;
     font-size: 11px;
     font-weight: 500;
-    padding: 4px 0 calc(var(--safe-bottom) + 4px);
+    padding: 4px 0;
   }
   .tabbar-item.active { color: var(--c-accent); }
   .tabbar-item:hover { text-decoration: none; }
