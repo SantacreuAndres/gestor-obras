@@ -127,6 +127,20 @@ textarea { resize: vertical; }
   background: var(--c-bg);
 }
 
+/* Planner week slide transitions. Re-keying the wrapper on weekStart causes
+   the whole content to remount; the animation fires on each new mount.
+   Direction is decided from where the new week falls relative to the old one. */
+@keyframes weekSlideFromRight {
+  from { transform: translateX(28px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes weekSlideFromLeft {
+  from { transform: translateX(-28px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+.week-slide-in-from-right { animation: weekSlideFromRight 220ms ease-out; }
+.week-slide-in-from-left  { animation: weekSlideFromLeft  220ms ease-out; }
+
 .sidebar {
   width: var(--sidebar-w);
   flex: 0 0 var(--sidebar-w);

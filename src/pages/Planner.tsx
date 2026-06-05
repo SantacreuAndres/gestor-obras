@@ -2,8 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import dayjs from 'dayjs'
 import isoWeek from 'dayjs/plugin/isoWeek'
 import {
-  ChevronLeft,
-  ChevronRight,
   Plus,
   Trash2,
   CalendarPlus,
@@ -12,6 +10,7 @@ import {
   Circle,
   CircleDot,
   CalendarDays,
+  RotateCcw,
 } from 'lucide-react'
 import { plannerApi, calendarApi } from '../db/api'
 import { supabase } from '../lib/supabase'
@@ -48,6 +47,16 @@ export function Planner() {
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draftForDay, setDraftForDay] = useState<string | null>(null)
+  // Direction of the last week change, used to animate the slide.
+  const [slideDir, setSlideDir] = useState<'left' | 'right' | null>(null)
+
+  function goToWeek(target: dayjs.Dayjs) {
+    if (target.isSame(weekStart, 'day')) return
+    setSlideDir(target.isAfter(weekStart) ? 'left' : 'right')
+    setWeekStart(target)
+  }
+
+  const isOnCurrentWeek = weekStart.isSame(dayjs().startOf('isoWeek'), 'day')
 
   const weekEnd = useMemo(() => weekStart.add(6, 'day'), [weekStart])
 
@@ -221,11 +230,7 @@ export function Planner() {
     if (Math.abs(dx) < 60) return
     if (Math.abs(dx) < Math.abs(dy) * 1.5) return
     if (dt > 800) return
-    if (dx < 0) {
-      setWeekStart(weekStart.add(1, 'week'))
-    } else {
-      setWeekStart(weekStart.subtract(1, 'week'))
-    }
+    goToWeek(dx < 0 ? weekStart.add(1, 'week') : weekStart.subtract(1, 'week'))
   }
 
   return (
@@ -238,30 +243,21 @@ export function Planner() {
       <div className="page-header">
         <div>
           <div className="page-title">Planner</div>
-          <div className="page-subtitle">{labelSemana}</div>
+          <div className="page-subtitle">
+            {labelSemana}
+            <span className="text-xs text-muted" style={{ marginLeft: 8 }}>
+              · deslizá para cambiar de semana
+            </span>
+          </div>
         </div>
-        <div className="row gap-8">
+        {!isOnCurrentWeek && (
           <button
             className="btn btn-ghost btn-sm"
-            onClick={() => setWeekStart(weekStart.subtract(1, 'week'))}
-            aria-label="Semana anterior"
+            onClick={() => goToWeek(dayjs().startOf('isoWeek'))}
           >
-            <ChevronLeft size={16} />
+            <RotateCcw size={14} /> Hoy
           </button>
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={() => setWeekStart(dayjs().startOf('isoWeek'))}
-          >
-            Hoy
-          </button>
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={() => setWeekStart(weekStart.add(1, 'week'))}
-            aria-label="Semana siguiente"
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
+        )}
       </div>
 
       {loading && (
@@ -271,7 +267,16 @@ export function Planner() {
       )}
 
       {!loading && (
-        <div className="col gap-12">
+        <div
+          key={weekStart.format('YYYY-MM-DD')}
+          className={
+            slideDir === 'left'
+              ? 'col gap-12 week-slide-in-from-right'
+              : slideDir === 'right'
+                ? 'col gap-12 week-slide-in-from-left'
+                : 'col gap-12'
+          }
+        >
           {days.map((d, i) => {
             const fecha = d.format('YYYY-MM-DD')
             const isToday = d.isSame(dayjs(), 'day')
