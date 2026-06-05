@@ -673,16 +673,16 @@ html[data-section='config'] .kpi {
   .tabbar {
     display: flex;
     position: fixed;
-    /* Glass "bubble" pill anchored to the very bottom edge: it extends down
-       through the safe-area so it fills the bottom of the screen (no empty
-       strip below it in standalone PWA), while padding-bottom keeps the icons
-       up above the iOS home indicator. Side margins + rounding hug the
-       iPhone's own rounded corners. */
+    /* Glass "bubble" pill anchored to the very bottom edge. Tight 8px
+       padding-bottom keeps the icons clear of the iPhone's home-indicator
+       gesture strip (which is only ~5px in practice) without reserving the
+       full safe-area inset — that was leaving a big empty band below the
+       icons inside the pill. */
     left: 8px;
     right: 8px;
     bottom: 0;
-    height: calc(var(--tabbar-h) + var(--safe-bottom));
-    padding-bottom: var(--safe-bottom);
+    height: calc(var(--tabbar-h) + 8px);
+    padding-bottom: 8px;
     border-radius: 28px;
     background: rgba(255, 255, 255, 0.34);
     -webkit-backdrop-filter: blur(30px) saturate(180%);
