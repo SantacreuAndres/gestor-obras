@@ -42,8 +42,11 @@
   --sidebar-w: 240px;
   --tabbar-h: 64px;
 
+  /* System font stack: SF Pro on iOS/macOS, Segoe UI on Windows, Roboto on
+     Android. Matches the OS look so the app feels native. */
   font-family:
-    'Trebuchet MS', 'Lucida Grande', 'Lucida Sans Unicode', 'Lucida Sans', sans-serif;
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display',
+    'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-size: 15px;
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
@@ -387,19 +390,28 @@ textarea { resize: vertical; }
 }
 
 .card {
-  /* Slightly translucent over the gradient backdrop. The backdrop-filter
-     blurs anything behind so the colour bleeds through softly without
-     turning the text muddy. Falls back to a near-opaque white on browsers
-     without backdrop-filter (most modern ones support it). */
-  background: rgba(255, 255, 255, 0.78);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
-  backdrop-filter: blur(14px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: var(--radius-lg);
+  /* Liquid Glass — iOS-style frosted pane. Heavy backdrop blur picks up the
+     orange gradient behind, saturation boost keeps it vivid, a soft inset
+     highlight at the top + bottom mimics the way real glass refracts light
+     at its edges. Falls back to a translucent white on browsers without
+     backdrop-filter. */
+  background: rgba(255, 255, 255, 0.42);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 18px;
   padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* Inner highlight (top) + soft shadow tint (bottom) → glass edge feel. */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.18),
+    0 4px 18px -8px rgba(0, 0, 0, 0.12);
+}
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .card { background: rgba(255, 255, 255, 0.9); }
 }
 
 .card-row {
