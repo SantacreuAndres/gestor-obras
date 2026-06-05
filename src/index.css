@@ -154,6 +154,28 @@ body::after {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
+/* Safety skirt: a fixed glass layer parked at the bottom of the screen that
+   extends well past any plausible viewport bottom. Sits behind the real tabbar
+   so it only shows where the tabbar doesn't reach — which is exactly the
+   home-indicator strip iOS standalone leaves under the bar. Same colour as the
+   tabbar so there's no visible seam. */
+html::after {
+  content: '';
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: -200px;
+  height: calc(var(--tabbar-h) + var(--safe-bottom) + 220px);
+  z-index: 28;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.45);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  backdrop-filter: blur(30px) saturate(180%);
+}
+html[data-section='config']::after {
+  background: rgba(40, 40, 46, 0.55);
+}
+
 h1,
 h2,
 h3,
