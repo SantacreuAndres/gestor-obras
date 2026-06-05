@@ -74,21 +74,76 @@ body {
   overscroll-behavior: none;
 }
 
-/* Soft, painterly aurora — multiple low-opacity colour blooms over a warm base.
-   Lives on <html> so it fills the ENTIRE screen, including behind the
-   (now translucent) status bar and under the home indicator. Fixed so it
-   doesn't drift while scrolling. Warm-dominant so the orange accents inside the
-   bubbles feel native, with lavender / rose / mint notes for the aurora depth. */
+/* Per-section colour. The background gradient (--app-bg) and accent
+   (--section-accent) switch based on data-section set by Layout. Each gradient
+   goes from a light tint at the top to a saturated deep tone at the bottom —
+   same structure and saturation as the violet reference. A solid
+   background-color fallback prevents any white showing in safe areas. */
 html {
-  background:
-    radial-gradient(60% 50% at 12% 8%, rgba(255, 178, 120, 0.60) 0%, rgba(255, 178, 120, 0) 62%),
-    radial-gradient(58% 50% at 92% 6%, rgba(190, 150, 255, 0.42) 0%, rgba(190, 150, 255, 0) 60%),
-    radial-gradient(70% 58% at 88% 80%, rgba(255, 110, 80, 0.58) 0%, rgba(255, 110, 80, 0) 64%),
-    radial-gradient(66% 56% at 6% 92%, rgba(140, 215, 180, 0.38) 0%, rgba(140, 215, 180, 0) 64%),
-    radial-gradient(55% 48% at 50% 52%, rgba(255, 150, 110, 0.34) 0%, rgba(255, 150, 110, 0) 70%),
-    linear-gradient(158deg, #ffe9d8 0%, #ffd7c0 42%, #ffc2a4 100%);
-  background-attachment: fixed;
-  background-repeat: no-repeat;
+  --section-accent: #ff5722;
+  --app-bg: linear-gradient(162deg, #ffe9d6 0%, #ffc49a 40%, #ff8f57 72%, #ef6233 100%);
+  background-color: #ffb98a;
+}
+html[data-section='obras'] {
+  --section-accent: #ff5722;
+  background-color: #ffb98a;
+  --app-bg:
+    radial-gradient(60% 45% at 85% 88%, rgba(214, 60, 22, 0.55) 0%, rgba(214, 60, 22, 0) 60%),
+    linear-gradient(162deg, #ffe9d6 0%, #ffc49a 40%, #ff8f57 72%, #ef6233 100%);
+}
+html[data-section='planner'] {
+  --section-accent: #8b5cf6;
+  background-color: #b692ec;
+  --app-bg:
+    radial-gradient(60% 45% at 85% 88%, rgba(98, 50, 175, 0.45) 0%, rgba(98, 50, 175, 0) 60%),
+    linear-gradient(162deg, #efe6fb 0%, #cdaef0 40%, #9c6fd6 72%, #7344b8 100%);
+}
+html[data-section='calendario'] {
+  --section-accent: #16a34a;
+  background-color: #93d99a;
+  --app-bg:
+    radial-gradient(60% 45% at 85% 88%, rgba(20, 120, 70, 0.45) 0%, rgba(20, 120, 70, 0) 60%),
+    linear-gradient(162deg, #e6f6e6 0%, #aee0a8 40%, #5fc06a 72%, #2f9e57 100%);
+}
+html[data-section='contactos'] {
+  --section-accent: #2f86c9;
+  background-color: #93c8ee;
+  --app-bg:
+    radial-gradient(60% 45% at 85% 88%, rgba(30, 110, 175, 0.42) 0%, rgba(30, 110, 175, 0) 60%),
+    linear-gradient(162deg, #e6f2fb 0%, #aad7f3 40%, #5fb3e8 72%, #2f86c9 100%);
+}
+html[data-section='config'] {
+  /* Dark "negro" section: flip the text/border variables to light so all the
+     var()-driven text stays readable, and re-skin the glass dark below. */
+  --section-accent: #f4f4f6;
+  --c-text: #f2f2f4;
+  --c-text-soft: #c2c2c8;
+  --c-text-muted: #97979e;
+  --c-border: rgba(255, 255, 255, 0.16);
+  --c-bg-soft: rgba(255, 255, 255, 0.08);
+  background-color: #1d1d20;
+  --app-bg: linear-gradient(162deg, #45454d 0%, #2a2a30 55%, #161618 100%);
+}
+
+/* Fixed full-bleed background layer. A fixed pseudo-element is reliable on iOS
+   Safari, unlike background-attachment:fixed which left a white band. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background: var(--app-bg);
+  transition: background 350ms ease;
+}
+/* Subtle film grain for the printed-poster texture in the reference. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 h1,
@@ -381,22 +436,30 @@ textarea { resize: vertical; }
      readable while the colour shows. The double inset highlight is the
      refracted "glass edge"; the warm-tinted drop shadow lifts it off the
      backdrop. Falls back to translucent white where backdrop-filter is absent. */
-  background: rgba(255, 255, 255, 0.30);
-  -webkit-backdrop-filter: blur(34px) saturate(185%);
-  backdrop-filter: blur(34px) saturate(185%);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.22);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.42);
   border-radius: 22px;
   padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.65),
-    inset 0 -1px 1px rgba(255, 255, 255, 0.12),
-    0 8px 26px -12px rgba(140, 45, 12, 0.30);
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 8px 26px -12px rgba(60, 30, 10, 0.28);
 }
 @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-  .card { background: rgba(255, 255, 255, 0.88); }
+  .card { background: rgba(255, 255, 255, 0.85); }
+}
+/* Dark glass for the config ("negro") section. */
+html[data-section='config'] .card,
+html[data-section='config'] .kpi {
+  background: rgba(40, 40, 46, 0.42);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 8px 26px -12px rgba(0, 0, 0, 0.5);
 }
 
 .card-row {
@@ -567,15 +630,15 @@ textarea { resize: vertical; }
 }
 .kpi {
   /* Glass bubble, same language as .card. */
-  background: rgba(255, 255, 255, 0.30);
-  -webkit-backdrop-filter: blur(30px) saturate(180%);
-  backdrop-filter: blur(30px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.22);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.42);
   border-radius: 20px;
   padding: 12px 14px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    0 6px 20px -12px rgba(140, 45, 12, 0.28);
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 6px 20px -12px rgba(60, 30, 10, 0.26);
 }
 .kpi-label {
   font-size: 0.75rem;
@@ -609,13 +672,13 @@ textarea { resize: vertical; }
     bottom: calc(var(--safe-bottom) + 8px);
     height: var(--tabbar-h);
     border-radius: 26px;
-    background: rgba(255, 255, 255, 0.42);
+    background: rgba(255, 255, 255, 0.34);
     -webkit-backdrop-filter: blur(30px) saturate(180%);
     backdrop-filter: blur(30px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.5);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.7),
-      0 10px 30px -10px rgba(120, 40, 10, 0.32);
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      0 10px 30px -10px rgba(60, 30, 10, 0.34);
     z-index: 30;
   }
   .tabbar-item {
@@ -631,7 +694,8 @@ textarea { resize: vertical; }
     font-weight: 500;
     padding: 4px 0;
   }
-  .tabbar-item.active { color: var(--c-accent); }
+  /* Active tab uses the current section's colour. */
+  .tabbar-item.active { color: var(--section-accent); }
   .tabbar-item:hover { text-decoration: none; }
 
   .page { padding: 16px 12px 12px; }

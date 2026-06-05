@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { useEffect } from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Building2, Users, Settings, HardHat, Calendar, ListChecks } from 'lucide-react'
 
 const NAV = [
@@ -9,7 +10,19 @@ const NAV = [
   { to: '/config', label: 'Config', icon: Settings },
 ]
 
+// First path segment → background section. Sub-routes (e.g. /obras/:id) keep
+// their parent section's colour.
+const SECTIONS = ['obras', 'planner', 'calendario', 'contactos', 'config']
+
 export function Layout() {
+  const location = useLocation()
+
+  useEffect(() => {
+    const seg = location.pathname.split('/')[1] || 'obras'
+    const section = SECTIONS.includes(seg) ? seg : 'obras'
+    document.documentElement.dataset.section = section
+  }, [location.pathname])
+
   return (
     <div className="app">
       <aside className="sidebar">
