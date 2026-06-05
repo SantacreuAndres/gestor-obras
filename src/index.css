@@ -65,7 +65,24 @@ body,
 }
 
 body {
-  background: var(--c-bg);
+  /* Layered background: two soft accent-tinted radial blobs sitting on top of
+     the base grey. background-attachment: fixed keeps them anchored to the
+     viewport so scrolling doesn't drag the gradient around. The blobs are very
+     low opacity so cards and text stay legible without an extra backdrop. */
+  background:
+    radial-gradient(
+      ellipse 70% 50% at 85% 10%,
+      rgba(255, 87, 34, 0.22) 0%,
+      rgba(255, 87, 34, 0) 70%
+    ),
+    radial-gradient(
+      ellipse 60% 40% at 10% 95%,
+      rgba(255, 87, 34, 0.14) 0%,
+      rgba(255, 87, 34, 0) 65%
+    ),
+    var(--c-bg);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
   color: var(--c-text);
   overflow: hidden;
   overscroll-behavior: none;
@@ -134,7 +151,8 @@ textarea { resize: vertical; }
   height: 100vh;
   height: 100dvh;
   width: 100%;
-  background: var(--c-bg);
+  /* Transparent so the body's gradient shows through. */
+  background: transparent;
 }
 
 /* Planner week slide transitions. Re-keying the wrapper on weekStart causes
