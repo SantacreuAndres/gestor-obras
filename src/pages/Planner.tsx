@@ -330,8 +330,10 @@ function DiaSection(p: DiaSectionProps) {
       className="card"
       style={{
         padding: 12,
-        background: p.isToday ? '#fff7ed' : undefined,
-        borderColor: p.isToday ? 'var(--c-accent)' : undefined,
+        // Today: keep the glass (backdrop blur stays from .card) but warm and
+        // brighten the tint a touch + accent border so it stands out.
+        background: p.isToday ? 'rgba(255, 246, 236, 0.5)' : undefined,
+        borderColor: p.isToday ? 'rgba(255, 87, 34, 0.65)' : undefined,
       }}
     >
       <div
@@ -380,11 +382,23 @@ function DiaSection(p: DiaSectionProps) {
         ) : (
           <button
             type="button"
-            className="btn btn-ghost btn-sm"
             onClick={p.onOpenDraft}
-            style={{ alignSelf: 'flex-start' }}
+            aria-label="Agregar tarea"
+            title="Agregar tarea"
+            style={{
+              alignSelf: 'flex-end',
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              border: '1px solid rgba(20, 20, 20, 0.72)',
+              background: 'transparent',
+              color: 'rgba(20, 20, 20, 0.8)',
+              display: 'grid',
+              placeItems: 'center',
+              cursor: 'pointer',
+            }}
           >
-            <Plus size={14} /> Agregar tarea
+            <Plus size={18} />
           </button>
         )}
       </div>
@@ -474,11 +488,13 @@ function TareaRow({
         display: 'flex',
         flexDirection: 'column',
         gap: 6,
-        padding: 8,
-        background: 'var(--c-bg-soft)',
-        border: '1px solid var(--c-border)',
-        borderRadius: 8,
-        opacity: t.estado === 'hecha' ? 0.7 : 1,
+        padding: 10,
+        // No fill: the task's area is defined by a single thin black hairline
+        // on the perimeter, so it reads as an outline floating over the glass.
+        background: 'transparent',
+        border: '1px solid rgba(20, 20, 20, 0.72)',
+        borderRadius: 12,
+        opacity: t.estado === 'hecha' ? 0.55 : 1,
       }}
     >
       <div className="row gap-8" style={{ alignItems: 'flex-start' }}>
@@ -704,10 +720,10 @@ function DraftRow({ fecha, onClose }: { fecha: string; onClose: () => void }) {
         display: 'flex',
         flexDirection: 'column',
         gap: 6,
-        padding: 8,
-        background: 'var(--c-bg-soft)',
-        border: '1px dashed var(--c-accent)',
-        borderRadius: 8,
+        padding: 10,
+        background: 'transparent',
+        border: '1px dashed rgba(20, 20, 20, 0.55)',
+        borderRadius: 12,
       }}
     >
       <input

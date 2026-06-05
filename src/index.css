@@ -73,27 +73,33 @@ body {
      viewport so scrolling doesn't drag the gradient around. The blobs are very
      low opacity so cards and text stay legible without an extra backdrop. */
   background:
-    /* Two saturated radial blobs that cover most of the viewport, layered on
-       top of a vertical wash. End result is a warm orange field that gets
-       deeper toward the bottom, similar to the Nike Year-in-Review look. */
+    /* Complex warm "sunset" field built from several overlapping hues so it
+       reads as rich and layered rather than a flat orange. From bottom-right
+       deep crimson, up through coral, into golden amber, over a diagonal
+       peach→ember base. Fixed to the viewport so it doesn't scroll. */
     radial-gradient(
-      ellipse 90% 70% at 70% 80%,
-      rgba(220, 50, 15, 0.85) 0%,
-      rgba(255, 87, 34, 0.45) 40%,
-      rgba(255, 87, 34, 0) 75%
+      120% 90% at 85% 100%,
+      rgba(198, 28, 18, 0.92) 0%,
+      rgba(255, 80, 30, 0.55) 34%,
+      rgba(255, 120, 50, 0) 72%
     ),
     radial-gradient(
-      ellipse 80% 60% at 20% 30%,
-      rgba(255, 140, 80, 0.7) 0%,
-      rgba(255, 140, 80, 0) 70%
+      85% 70% at 4% 52%,
+      rgba(255, 92, 120, 0.42) 0%,
+      rgba(255, 92, 120, 0) 66%
+    ),
+    radial-gradient(
+      120% 80% at 60% -5%,
+      rgba(255, 196, 96, 0.62) 0%,
+      rgba(255, 196, 96, 0) 70%
     ),
     linear-gradient(
-      180deg,
-      rgba(255, 200, 160, 0.55) 0%,
-      rgba(255, 150, 100, 0.55) 50%,
-      rgba(255, 100, 50, 0.65) 100%
-    ),
-    var(--c-bg);
+      158deg,
+      #ffe9d2 0%,
+      #ffd0ab 38%,
+      #ff9c66 72%,
+      #ef6536 100%
+    );
   background-attachment: fixed;
   background-repeat: no-repeat;
   color: var(--c-text);
@@ -390,28 +396,27 @@ textarea { resize: vertical; }
 }
 
 .card {
-  /* Liquid Glass — iOS-style frosted pane. Heavy backdrop blur picks up the
-     orange gradient behind, saturation boost keeps it vivid, a soft inset
-     highlight at the top + bottom mimics the way real glass refracts light
-     at its edges. Falls back to a translucent white on browsers without
-     backdrop-filter. */
-  background: rgba(255, 255, 255, 0.42);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  backdrop-filter: blur(28px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  border-radius: 18px;
+  /* Liquid Glass — iOS-style frosted pane, quite transparent so the sunset
+     gradient bleeds through. Heavy backdrop blur + saturation keep content
+     readable while the colour shows. The double inset highlight is the
+     refracted "glass edge"; the warm-tinted drop shadow lifts it off the
+     backdrop. Falls back to translucent white where backdrop-filter is absent. */
+  background: rgba(255, 255, 255, 0.30);
+  -webkit-backdrop-filter: blur(34px) saturate(185%);
+  backdrop-filter: blur(34px) saturate(185%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 22px;
   padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  /* Inner highlight (top) + soft shadow tint (bottom) → glass edge feel. */
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.18),
-    0 4px 18px -8px rgba(0, 0, 0, 0.12);
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.12),
+    0 8px 26px -12px rgba(140, 45, 12, 0.30);
 }
 @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-  .card { background: rgba(255, 255, 255, 0.9); }
+  .card { background: rgba(255, 255, 255, 0.88); }
 }
 
 .card-row {
