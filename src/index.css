@@ -61,13 +61,19 @@
 html,
 body,
 #root {
-  height: 100vh;
-  height: 100dvh;
+  height: 100%;
   margin: 0;
   padding: 0;
 }
 
+/* Lock the body to the actual visual viewport with position:fixed + inset:0.
+   This is THE reliable way to fill the whole screen in an iOS standalone PWA —
+   100vh / 100dvh fall short of the physical bottom there, leaving the
+   background exposed under the nav. With the body pinned to all four edges,
+   #root → .app → the flex tabbar reach the true bottom. */
 body {
+  position: fixed;
+  inset: 0;
   background: transparent;
   color: var(--c-text);
   overflow: hidden;
@@ -208,8 +214,8 @@ textarea { resize: vertical; }
 
 .app {
   display: flex;
-  height: 100vh;
-  height: 100dvh;
+  /* 100% of the position:fixed body, which is pinned to the full viewport. */
+  height: 100%;
   width: 100%;
   /* Transparent so the body's gradient shows through. */
   background: transparent;
