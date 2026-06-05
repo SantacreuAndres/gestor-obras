@@ -83,37 +83,37 @@ body {
    light→mid linear wash. The linear's bottom is a MID tone, not the darkest,
    and the bloom fades to transparent before the bottom edge — so the very
    bottom never forms a hard dark band behind the floating nav. */
+/* The section gradient is painted directly on <html> (the root box, which
+   always covers the whole physical screen). This is the bottom-most safety
+   layer: even if a sliver shows below the nav, it's a seamless continuation of
+   the gradient — never a flat-colour band. */
 html {
+  background: var(--app-bg);
   --section-accent: #ff5722;
-  background-color: #ffc6a0;
   --app-bg:
     radial-gradient(85% 60% at 72% 76%, rgba(239, 98, 51, 0.58) 0%, rgba(239, 98, 51, 0) 60%),
     linear-gradient(172deg, #ffe9d6 0%, #ffcaa3 48%, #ffb184 100%);
 }
 html[data-section='obras'] {
   --section-accent: #ff5722;
-  background-color: #ffc6a0;
   --app-bg:
     radial-gradient(85% 60% at 72% 76%, rgba(239, 98, 51, 0.58) 0%, rgba(239, 98, 51, 0) 60%),
     linear-gradient(172deg, #ffe9d6 0%, #ffcaa3 48%, #ffb184 100%);
 }
 html[data-section='planner'] {
   --section-accent: #8b5cf6;
-  background-color: #c9aef0;
   --app-bg:
     radial-gradient(85% 60% at 72% 76%, rgba(115, 68, 184, 0.55) 0%, rgba(115, 68, 184, 0) 60%),
     linear-gradient(172deg, #efe6fb 0%, #d6bcf3 48%, #c2a3ec 100%);
 }
 html[data-section='calendario'] {
   --section-accent: #16a34a;
-  background-color: #a6dca8;
   --app-bg:
     radial-gradient(85% 60% at 72% 76%, rgba(34, 150, 80, 0.52) 0%, rgba(34, 150, 80, 0) 60%),
     linear-gradient(172deg, #e9f7e7 0%, #bce5b6 48%, #9ad99a 100%);
 }
 html[data-section='contactos'] {
   --section-accent: #2f86c9;
-  background-color: #a6d2f0;
   --app-bg:
     radial-gradient(85% 60% at 72% 76%, rgba(47, 134, 201, 0.52) 0%, rgba(47, 134, 201, 0) 60%),
     linear-gradient(172deg, #e6f2fb 0%, #bee0f6 48%, #a6d2f0 100%);
@@ -127,7 +127,6 @@ html[data-section='config'] {
   --c-text-muted: #97979e;
   --c-border: rgba(255, 255, 255, 0.16);
   --c-bg-soft: rgba(255, 255, 255, 0.08);
-  background-color: #26262b;
   --app-bg:
     radial-gradient(85% 60% at 72% 74%, rgba(10, 10, 12, 0.6) 0%, rgba(10, 10, 12, 0) 62%),
     linear-gradient(172deg, #45454d 0%, #34343b 55%, #2a2a30 100%);
@@ -154,27 +153,6 @@ body::after {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* Safety skirt: a fixed glass layer parked at the bottom of the screen that
-   extends well past any plausible viewport bottom. Sits behind the real tabbar
-   so it only shows where the tabbar doesn't reach — which is exactly the
-   home-indicator strip iOS standalone leaves under the bar. Same colour as the
-   tabbar so there's no visible seam. */
-html::after {
-  content: '';
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: -200px;
-  height: calc(var(--tabbar-h) + var(--safe-bottom) + 220px);
-  z-index: 28;
-  pointer-events: none;
-  background: rgba(255, 255, 255, 0.45);
-  -webkit-backdrop-filter: blur(30px) saturate(180%);
-  backdrop-filter: blur(30px) saturate(180%);
-}
-html[data-section='config']::after {
-  background: rgba(40, 40, 46, 0.55);
-}
 
 h1,
 h2,
@@ -685,35 +663,32 @@ html[data-section='config'] .kpi {
   .sidebar { display: none; }
 
   .main {
-    height: 100%;
+    flex: 1;
+    min-height: 0;
   }
   .main-scroll {
     padding-top: calc(var(--safe-top) + 8px);
-    padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 28px);
+    /* Small bottom padding only: the tabbar is a real layout sibling now, it
+       doesn't overlap the scroll area. */
+    padding-bottom: 16px;
   }
 
+  /* The tabbar is NOT position:fixed. It's the last flex child of .main (which
+     fills 100dvh), so its background is guaranteed to reach the physical bottom
+     of the screen — no fixed-positioning / safe-area guesswork, no stray strip
+     underneath. padding-bottom reserves the home-indicator zone so the icons
+     stay above it while the glass fills down to the edge. */
   .tabbar {
     display: flex;
-    position: fixed;
-    /* Edge-to-edge against the physical bottom and side edges. The iPhone's
-       own corner radius will visually clip the bottom corners so the bar
-       still reads as rounded on the device — and there's no way for the app
-       background to peek out beneath. Only the TOP corners are rounded. */
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: calc(var(--tabbar-h) + var(--safe-bottom) + 6px);
-    padding-bottom: calc(var(--safe-bottom) + 6px);
-    border-radius: 28px 28px 0 0;
+    flex-shrink: 0;
+    height: calc(var(--tabbar-h) + var(--safe-bottom));
+    padding-bottom: var(--safe-bottom);
+    border-radius: 26px 26px 0 0;
     background: rgba(255, 255, 255, 0.34);
     -webkit-backdrop-filter: blur(30px) saturate(180%);
     backdrop-filter: blur(30px) saturate(180%);
-    /* No bottom border because the edge is the physical screen edge. */
     border-top: 1px solid rgba(255, 255, 255, 0.5);
-    border-left: 1px solid rgba(255, 255, 255, 0.5);
-    border-right: 1px solid rgba(255, 255, 255, 0.5);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
-    z-index: 30;
   }
   .tabbar-item {
     flex: 1;
