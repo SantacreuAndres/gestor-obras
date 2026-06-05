@@ -70,15 +70,25 @@ body {
      viewport so scrolling doesn't drag the gradient around. The blobs are very
      low opacity so cards and text stay legible without an extra backdrop. */
   background:
+    /* Two saturated radial blobs that cover most of the viewport, layered on
+       top of a vertical wash. End result is a warm orange field that gets
+       deeper toward the bottom, similar to the Nike Year-in-Review look. */
     radial-gradient(
-      ellipse 70% 50% at 85% 10%,
-      rgba(255, 87, 34, 0.22) 0%,
-      rgba(255, 87, 34, 0) 70%
+      ellipse 90% 70% at 70% 80%,
+      rgba(220, 50, 15, 0.85) 0%,
+      rgba(255, 87, 34, 0.45) 40%,
+      rgba(255, 87, 34, 0) 75%
     ),
     radial-gradient(
-      ellipse 60% 40% at 10% 95%,
-      rgba(255, 87, 34, 0.14) 0%,
-      rgba(255, 87, 34, 0) 65%
+      ellipse 80% 60% at 20% 30%,
+      rgba(255, 140, 80, 0.7) 0%,
+      rgba(255, 140, 80, 0) 70%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 200, 160, 0.55) 0%,
+      rgba(255, 150, 100, 0.55) 50%,
+      rgba(255, 100, 50, 0.65) 100%
     ),
     var(--c-bg);
   background-attachment: fixed;
@@ -377,8 +387,14 @@ textarea { resize: vertical; }
 }
 
 .card {
-  background: var(--c-bg-elev);
-  border: 1px solid var(--c-border);
+  /* Slightly translucent over the gradient backdrop. The backdrop-filter
+     blurs anything behind so the colour bleeds through softly without
+     turning the text muddy. Falls back to a near-opaque white on browsers
+     without backdrop-filter (most modern ones support it). */
+  background: rgba(255, 255, 255, 0.78);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: var(--radius-lg);
   padding: 14px;
   display: flex;
