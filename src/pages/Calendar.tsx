@@ -1,16 +1,18 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import dayjs from 'dayjs'
 import { useCalendarEvents } from '../hooks/useCalendarEvents'
 import { calendarApi } from '../db/api'
-import { calendarStorage } from '../lib/calendarStorage'
 import type { CalendarEvent } from '../db/schema'
 import { CalendarSetup } from '../components/CalendarSetup'
 import { triggerBackgroundSync, deleteFromGoogle } from '../lib/googleSync'
 import '../styles/calendar.css'
 
 export function CalendarPage() {
-  const { events: initialEvents } = useCalendarEvents()
-  const [events, setEvents] = useState<CalendarEvent[]>(initialEvents)
+  // events comes straight from the hook. There used to be a local state
+  // mirroring it that fought with realtime — every refetch wiped local edits
+  // mid-flight and the calendar appeared empty. Now mutations call the API,
+  // realtime/visibility triggers refetch, and the UI re-renders.
+  const { events, refetch } = useCalendarEvents()
   const [currentDate, setCurrentDate] = useState(dayjs())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
@@ -21,11 +23,6 @@ export function CalendarPage() {
     eventTime: '',
     reminderMinutes: 0,
   })
-
-  // Sincronizar eventos iniciales
-  useEffect(() => {
-    setEvents(initialEvents)
-  }, [initialEvents])
 
   const monthStart = currentDate.startOf('month')
   const daysInMonth = monthStart.daysInMonth()
@@ -82,26 +79,7 @@ export function CalendarPage() {
         updatedAt: new Date().toISOString(),
       }
 
-      // Guardar en Supabase (prioridad)
-      let savedToSupabase = false
-      try {
-        await calendarApi.put(newEvent)
-        savedToSupabase = true
-        console.log('✅ Evento guardado en Supabase')
-      } catch (supabaseErr) {
-        // Si falla Supabase, intentar localStorage como fallback
-        console.warn('⚠️  Supabase no disponible, usando localStorage:', supabaseErr)
-        calendarStorage.add(newEvent)
-      }
-
-      // Actualizar estado local inmediatamente
-      setEvents((prev) => {
-        const filtered = prev.filter((e) => e.id !== newEvent.id)
-        return [...filtered, newEvent]
-      })
-
-      // Mostrar dónde se guardó
-      const location = savedToSupabase ? '☁️ Supabase' : '📱 Almacenamiento local'
+      await calendarApi.put(newEvent)
 
       // Si hay recordatorio y notificaciones están habilitadas, programar recordatorio
       if (formData.reminderMinutes && 'Notification' in window) {
@@ -112,8 +90,10 @@ export function CalendarPage() {
       setSelectedDate(null)
       setFormData({ title: '', description: '', eventTime: '', reminderMinutes: 0 })
 
-      // Mostrar confirmación con ubicación
-      alert(`✅ Evento guardado correctamente\n\n${location}`)
+      // Realtime + the visibility refetch in the hook bring the new event
+      // into view automatically; force one immediate refetch so the UI doesn't
+      // wait for the realtime round-trip.
+      void refetch()
 
       // Empujar a Google Calendar si está conectado (fire-and-forget)
       void triggerBackgroundSync()
@@ -142,18 +122,8 @@ export function CalendarPage() {
       // mapping cascade-deletes with the local row on some schema versions, so
       // deleting locally first would orphan the Google event.
       await deleteFromGoogle(id)
-
-      try {
-        await calendarApi.delete(id)
-      } catch (supabaseErr) {
-        // Si falla Supabase, usar localStorage
-        console.warn('Deleting from local storage:', supabaseErr)
-        calendarStorage.delete(id)
-      }
-
-      // Actualizar estado local
-      setEvents((prev) => prev.filter((e) => e.id !== id))
-      alert('✅ Evento eliminado')
+      await calendarApi.delete(id)
+      void refetch()
     } catch (err) {
       console.error('Error deleting event:', err)
       alert('Error al eliminar el evento')
