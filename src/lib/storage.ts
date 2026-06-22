@@ -68,3 +68,23 @@ export async function removeFromBucket(
   const { error } = await supabase.storage.from(bucket).remove([path])
   if (error) console.error('[storage.removeFromBucket] error', error)
 }
+
+/** Descarga un objeto del bucket y lo devuelve como data URL (data:image/...).
+ *  Útil para embeberlo directamente en un PDF generado en el cliente. */
+export async function getDataUrl(
+  bucket: Bucket,
+  path: string | null | undefined,
+): Promise<string | null> {
+  if (!path) return null
+  const { data, error } = await supabase.storage.from(bucket).download(path)
+  if (error || !data) {
+    console.error('[storage.getDataUrl] error', error)
+    return null
+  }
+  return new Promise<string | null>((resolve) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve((reader.result as string) ?? null)
+    reader.onerror = () => resolve(null)
+    reader.readAsDataURL(data)
+  })
+}

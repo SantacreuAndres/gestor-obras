@@ -12,8 +12,12 @@ export default defineConfig({
         name: 'Gestor de Obras',
         short_name: 'Obras',
         description: 'Expediente de obras de construcción — personal',
-        theme_color: '#f5f5f5',
-        background_color: '#f5f5f5',
+        // Matches the dark neutral that every section's gradient now converges
+        // to at the bottom edge. With this, the area iOS standalone leaves below
+        // the web viewport (the home-indicator zone) blends seamlessly with the
+        // gradient — no white band. NOTE: requires re-installing the PWA icon.
+        theme_color: '#2a2a30',
+        background_color: '#2a2a30',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',

@@ -15,6 +15,7 @@ import {
   Camera,
   Wallet,
   Receipt,
+  CreditCard,
   ClipboardList,
 } from 'lucide-react'
 import { obras as obrasApi, deleteObraCompleta } from '../db/db'
@@ -41,6 +42,7 @@ const TABS = [
   { to: 'deadlines', label: 'Deadlines', icon: AlarmClock },
   { to: 'materiales', label: 'Materiales', icon: Package },
   { to: 'viaticos', label: 'Viáticos', icon: Receipt },
+  { to: 'gastos', label: 'Gastos', icon: CreditCard },
   { to: 'documentos', label: 'Documentos', icon: FolderOpen },
   { to: 'fotos', label: 'Fotos', icon: Camera },
   { to: 'plata', label: 'Plata', icon: Wallet },

@@ -13,6 +13,7 @@ export {
   deadlinesApi as deadlines,
   materialesApi as materiales,
   viaticosApi as viaticos,
+  gastosApi as gastos,
   contactosApi as contactos,
   contactoObraApi as contactoObra,
   documentosApi as documentos,

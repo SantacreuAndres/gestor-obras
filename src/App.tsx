@@ -11,6 +11,7 @@ import { Notas } from './pages/obra/Notas'
 import { Deadlines } from './pages/obra/Deadlines'
 import { Materiales } from './pages/obra/Materiales'
 import { Viaticos } from './pages/obra/Viaticos'
+import { Gastos } from './pages/obra/Gastos'
 import { Documentos } from './pages/obra/Documentos'
 import { Fotos } from './pages/obra/Fotos'
 import { Plata } from './pages/obra/Plata'
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="deadlines" element={<Deadlines />} />
           <Route path="materiales" element={<Materiales />} />
           <Route path="viaticos" element={<Viaticos />} />
+          <Route path="gastos" element={<Gastos />} />
           <Route path="documentos" element={<Documentos />} />
           <Route path="fotos" element={<Fotos />} />
           <Route path="plata" element={<Plata />} />

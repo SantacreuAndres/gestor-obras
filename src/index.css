@@ -93,36 +93,44 @@ body {
    always covers the whole physical screen). This is the bottom-most safety
    layer: even if a sliver shows below the nav, it's a seamless continuation of
    the gradient — never a flat-colour band. */
+/* Every gradient now converges to a single neutral (#2a2a30) at the bottom
+   edge. This is the same colour declared in the PWA manifest's background_color,
+   so the area iOS standalone leaves below the web viewport (the home-indicator
+   zone) blends seamlessly with the gradient — no white band.
+
+   To keep the per-section colour identity, the section's saturated tone is held
+   until ~72%, then it fades over the bottom 28% into #2a2a30. The radial bloom
+   was lifted to ~62% so it doesn't muddy the dark floor under the dock. */
 html {
   background: var(--app-bg);
   --section-accent: #ff5722;
   --app-bg:
-    radial-gradient(85% 60% at 72% 76%, rgba(239, 98, 51, 0.58) 0%, rgba(239, 98, 51, 0) 60%),
-    linear-gradient(172deg, #ffe9d6 0%, #ffcaa3 48%, #ffb184 100%);
+    radial-gradient(85% 50% at 72% 62%, rgba(239, 98, 51, 0.58) 0%, rgba(239, 98, 51, 0) 60%),
+    linear-gradient(172deg, #ffe9d6 0%, #ffcaa3 42%, #ffb184 72%, #2a2a30 100%);
 }
 html[data-section='obras'] {
   --section-accent: #ff5722;
   --app-bg:
-    radial-gradient(85% 60% at 72% 76%, rgba(239, 98, 51, 0.58) 0%, rgba(239, 98, 51, 0) 60%),
-    linear-gradient(172deg, #ffe9d6 0%, #ffcaa3 48%, #ffb184 100%);
+    radial-gradient(85% 50% at 72% 62%, rgba(239, 98, 51, 0.58) 0%, rgba(239, 98, 51, 0) 60%),
+    linear-gradient(172deg, #ffe9d6 0%, #ffcaa3 42%, #ffb184 72%, #2a2a30 100%);
 }
 html[data-section='planner'] {
   --section-accent: #8b5cf6;
   --app-bg:
-    radial-gradient(85% 60% at 72% 76%, rgba(115, 68, 184, 0.55) 0%, rgba(115, 68, 184, 0) 60%),
-    linear-gradient(172deg, #efe6fb 0%, #d6bcf3 48%, #c2a3ec 100%);
+    radial-gradient(85% 50% at 72% 62%, rgba(115, 68, 184, 0.55) 0%, rgba(115, 68, 184, 0) 60%),
+    linear-gradient(172deg, #efe6fb 0%, #d6bcf3 42%, #c2a3ec 72%, #2a2a30 100%);
 }
 html[data-section='calendario'] {
   --section-accent: #16a34a;
   --app-bg:
-    radial-gradient(85% 60% at 72% 76%, rgba(34, 150, 80, 0.52) 0%, rgba(34, 150, 80, 0) 60%),
-    linear-gradient(172deg, #e9f7e7 0%, #bce5b6 48%, #9ad99a 100%);
+    radial-gradient(85% 50% at 72% 62%, rgba(34, 150, 80, 0.52) 0%, rgba(34, 150, 80, 0) 60%),
+    linear-gradient(172deg, #e9f7e7 0%, #bce5b6 42%, #9ad99a 72%, #2a2a30 100%);
 }
 html[data-section='contactos'] {
   --section-accent: #2f86c9;
   --app-bg:
-    radial-gradient(85% 60% at 72% 76%, rgba(47, 134, 201, 0.52) 0%, rgba(47, 134, 201, 0) 60%),
-    linear-gradient(172deg, #e6f2fb 0%, #bee0f6 48%, #a6d2f0 100%);
+    radial-gradient(85% 50% at 72% 62%, rgba(47, 134, 201, 0.52) 0%, rgba(47, 134, 201, 0) 60%),
+    linear-gradient(172deg, #e6f2fb 0%, #bee0f6 42%, #a6d2f0 72%, #2a2a30 100%);
 }
 html[data-section='config'] {
   /* Dark "negro" section: flip the text/border variables to light so all the
@@ -138,12 +146,18 @@ html[data-section='config'] {
     linear-gradient(172deg, #45454d 0%, #34343b 55%, #2a2a30 100%);
 }
 
-/* Fixed full-bleed background layer. A fixed pseudo-element is reliable on iOS
-   Safari, unlike background-attachment:fixed which left a white band. */
+/* Fixed full-bleed background layer. The pseudo-element extends 300px BELOW
+   the visible viewport so that whatever zone iOS reserves at the bottom in
+   standalone PWA mode (the home-indicator area, where the manifest's
+   background_color shows through) is covered by the gradient instead of
+   leaving a white band. */
 body::before {
   content: '';
   position: fixed;
-  inset: 0;
+  top: -200px;
+  left: 0;
+  right: 0;
+  bottom: -300px;
   z-index: -2;
   background: var(--app-bg);
   transition: background 350ms ease;
@@ -679,16 +693,18 @@ html[data-section='config'] .kpi {
     padding-bottom: 16px;
   }
 
-  /* The tabbar is NOT position:fixed. It's the last flex child of .main (which
-     fills 100dvh), so its background is guaranteed to reach the physical bottom
-     of the screen — no fixed-positioning / safe-area guesswork, no stray strip
-     underneath. padding-bottom reserves the home-indicator zone so the icons
-     stay above it while the glass fills down to the edge. */
+  /* The tabbar is the last flex child of .main and pins itself to the bottom
+     of the body box. To eat the iOS home-indicator zone (the "franja blanca"),
+     the dock is grown by safe-area-inset-bottom + an extra 28px of "skirt"
+     padding so the glass background extends past the visible bottom and the
+     icons sit above the indicator. Combined with the gradient pseudo-element
+     that extends -300px below the viewport, no white strip can show. */
   .tabbar {
     display: flex;
     flex-shrink: 0;
-    height: calc(var(--tabbar-h) + 10px);
-    padding-bottom: 10px;
+    height: calc(var(--tabbar-h) + var(--safe-bottom) + 28px);
+    padding-bottom: calc(var(--safe-bottom) + 28px);
+    margin-bottom: calc(-1 * var(--safe-bottom) - 14px);
     border-radius: 26px 26px 0 0;
     background: rgba(255, 255, 255, 0.34);
     -webkit-backdrop-filter: blur(30px) saturate(180%);

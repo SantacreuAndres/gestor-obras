@@ -12,6 +12,7 @@ export type TableName =
   | 'deadlines'
   | 'materiales'
   | 'viaticos'
+  | 'gastos'
   | 'contactos'
   | 'contacto_obra'
   | 'documentos'

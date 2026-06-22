@@ -3,10 +3,8 @@ import {
   Plus,
   Pencil,
   Trash2,
-  Receipt,
+  CreditCard,
   Camera,
-  Check,
-  RotateCcw,
   CheckSquare,
   Square,
   FileDown,
@@ -14,7 +12,7 @@ import {
   X,
 } from 'lucide-react'
 import { useObra } from '../ObraDetail'
-import { viaticos as viaticosApi } from '../../db/db'
+import { gastos as gastosApi } from '../../db/db'
 import { useLive } from '../../hooks/useLive'
 import {
   uploadToBucket,
@@ -22,7 +20,7 @@ import {
   removeFromBucket,
   getDataUrl,
 } from '../../lib/storage'
-import type { Viatico } from '../../db/schema'
+import type { Gasto } from '../../db/schema'
 import { uid, todayIso } from '../../lib/ids'
 import { fmtMoney, fmtDate } from '../../lib/format'
 import { EmptyState } from '../../components/EmptyState'
@@ -30,40 +28,35 @@ import { Modal } from '../../components/Modal'
 import { BlobImage } from '../../components/BlobImage'
 import { exportarPdf } from '../../lib/exportPdf'
 
-const blank = (obraId: string): Partial<Viatico> => ({
+const blank = (obraId: string): Partial<Gasto> => ({
   obraId,
   fecha: todayIso(),
   concepto: '',
   monto: 0,
-  estado: 'pendiente',
 })
 
-export function Viaticos() {
+export function Gastos() {
   const obra = useObra()
-  const items = useLive('viaticos', () => viaticosApi.byObra(obra.id), [obra.id]) ?? []
-  const [editing, setEditing] = useState<Partial<Viatico> | null>(null)
+  const items = useLive('gastos', () => gastosApi.byObra(obra.id), [obra.id]) ?? []
+  const [editing, setEditing] = useState<Partial<Gasto> | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  // Selection mode: shows checkboxes and an export button.
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [exporting, setExporting] = useState(false)
 
-  const totales = useMemo(() => {
-    const puesto = items.reduce((acc, v) => acc + v.monto, 0)
-    const aCobrar = items
-      .filter((v) => v.estado === 'pendiente')
-      .reduce((acc, v) => acc + v.monto, 0)
-    return { puesto, aCobrar, cobrado: puesto - aCobrar }
-  }, [items])
+  const total = useMemo(
+    () => items.reduce((acc, g) => acc + g.monto, 0),
+    [items],
+  )
 
   const selectedTotal = useMemo(
     () =>
       items
-        .filter((v) => selected.has(v.id))
-        .reduce((acc, v) => acc + v.monto, 0),
+        .filter((g) => selected.has(g.id))
+        .reduce((acc, g) => acc + g.monto, 0),
     [items, selected],
   )
 
@@ -77,7 +70,7 @@ export function Viaticos() {
   }
 
   function selectAll() {
-    setSelected(new Set(items.map((v) => v.id)))
+    setSelected(new Set(items.map((g) => g.id)))
   }
 
   function exitSelectMode() {
@@ -88,14 +81,13 @@ export function Viaticos() {
   async function save() {
     if (!editing?.concepto?.trim() || !editing.fecha) return
     const id = editing.id ?? uid()
-    await viaticosApi.put({
+    await gastosApi.put({
       id,
       obraId: obra.id,
       fecha: editing.fecha,
       concepto: editing.concepto.trim(),
       monto: Number(editing.monto ?? 0),
       comprobantePath: editing.comprobantePath,
-      estado: editing.estado ?? 'pendiente',
     })
     setEditing(null)
   }
@@ -121,15 +113,9 @@ export function Viaticos() {
     setEditing({ ...editing, comprobantePath: undefined })
   }
 
-  async function toggle(v: Viatico) {
-    await viaticosApi.update(v.id, {
-      estado: v.estado === 'pendiente' ? 'recuperado' : 'pendiente',
-    })
-  }
-
-  async function borrar(v: Viatico) {
-    if (v.comprobantePath) await removeFromBucket('comprobantes', v.comprobantePath)
-    await viaticosApi.delete(v.id)
+  async function borrar(g: Gasto) {
+    if (g.comprobantePath) await removeFromBucket('comprobantes', g.comprobantePath)
+    await gastosApi.delete(g.id)
   }
 
   async function abrirPreview(path: string | undefined) {
@@ -142,29 +128,26 @@ export function Viaticos() {
     const ids = Array.from(selected)
     if (ids.length === 0) return
     const seleccionados = items
-      .filter((v) => selected.has(v.id))
+      .filter((g) => selected.has(g.id))
       .sort((a, b) => a.fecha.localeCompare(b.fecha))
     try {
       setExporting(true)
-      // Descarga las imágenes de comprobante en paralelo y las pasa al PDF
-      // como data URLs para embeberlas. Si alguna falla, se exporta sin ella.
       const itemsConFotos = await Promise.all(
-        seleccionados.map(async (v) => ({
-          fecha: v.fecha,
-          concepto: v.concepto,
-          monto: v.monto,
-          comprobanteDataUrl: v.comprobantePath
-            ? (await getDataUrl('comprobantes', v.comprobantePath)) ?? undefined
+        seleccionados.map(async (g) => ({
+          fecha: g.fecha,
+          concepto: g.concepto,
+          monto: g.monto,
+          comprobanteDataUrl: g.comprobantePath
+            ? (await getDataUrl('comprobantes', g.comprobantePath)) ?? undefined
             : undefined,
         })),
       )
       await exportarPdf({
-        titulo: 'Viáticos',
+        titulo: 'Gastos',
         obra: obra.nombre,
         items: itemsConFotos,
       })
-      // Solo marcamos como exportados después de que el PDF se generó bien.
-      await viaticosApi.markExported(ids)
+      await gastosApi.markExported(ids)
       exitSelectMode()
     } catch (err) {
       alert('No se pudo exportar el PDF: ' + (err as Error).message)
@@ -176,7 +159,7 @@ export function Viaticos() {
   return (
     <>
       <div className="row-between mb-12">
-        <h3>Viáticos / Gastos a recuperar</h3>
+        <h3>Gastos</h3>
         {selectMode ? (
           <button
             className="btn btn-ghost btn-sm"
@@ -191,8 +174,6 @@ export function Viaticos() {
               className="btn btn-ghost btn-sm"
               onClick={() => setSelectMode(true)}
               disabled={items.length === 0}
-              aria-label="Exportar viáticos"
-              title="Exportar viáticos"
             >
               <Share size={14} /> Exportar
             </button>
@@ -245,46 +226,29 @@ export function Viaticos() {
 
       <div className="kpi-grid">
         <div className="kpi">
-          <div className="kpi-label">Total puesto</div>
-          <div className="kpi-value numeric">{fmtMoney(totales.puesto)}</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">A cobrar</div>
-          <div className="kpi-value numeric" style={{ color: totales.aCobrar > 0 ? 'var(--c-warn)' : 'var(--c-success)' }}>
-            {fmtMoney(totales.aCobrar)}
-          </div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">Cobrado</div>
-          <div className="kpi-value numeric text-success">
-            {fmtMoney(totales.cobrado)}
-          </div>
+          <div className="kpi-label">Total gastos</div>
+          <div className="kpi-value numeric">{fmtMoney(total)}</div>
         </div>
       </div>
 
       {items.length === 0 ? (
         <EmptyState
-          icon={Receipt}
-          title="Sin viáticos cargados"
-          subtitle="Anotá nafta, peajes, fletes, comida… cualquier gasto que ponés y después cobrás."
+          icon={CreditCard}
+          title="Sin gastos cargados"
+          subtitle="Gastos propios (que no se cobran al comitente). Los podés seleccionar y exportar a PDF cuando los necesites."
         />
       ) : (
         <div className="list">
-          {items.map((v) => {
-            const isSelected = selected.has(v.id)
-            const wasExported = !!v.exportadoEn
+          {items.map((g) => {
+            const isSelected = selected.has(g.id)
+            const wasExported = !!g.exportadoEn
             return (
               <div
-                key={v.id}
+                key={g.id}
                 className="card"
-                onClick={
-                  selectMode ? () => toggleSelect(v.id) : undefined
-                }
+                onClick={selectMode ? () => toggleSelect(g.id) : undefined}
                 style={{
                   cursor: selectMode ? 'pointer' : undefined,
-                  // Tint rows that have been exported before. Selection
-                  // re-saturates the row so the user can see what's about to be
-                  // included in the new PDF even if it was already exported.
                   opacity: wasExported && !isSelected ? 0.55 : 1,
                   filter:
                     wasExported && !isSelected ? 'grayscale(0.7)' : undefined,
@@ -301,7 +265,7 @@ export function Viaticos() {
                       className="btn-icon"
                       onClick={(e) => {
                         e.stopPropagation()
-                        toggleSelect(v.id)
+                        toggleSelect(g.id)
                       }}
                       aria-label={
                         isSelected ? 'Deseleccionar' : 'Seleccionar'
@@ -320,47 +284,36 @@ export function Viaticos() {
                     </button>
                   )}
                   <div className="col" style={{ minWidth: 0, flex: 1 }}>
-                    <div className="weight-600 truncate">{v.concepto}</div>
+                    <div className="weight-600 truncate">{g.concepto}</div>
                     <div className="text-xs text-muted">
-                      {fmtDate(v.fecha)}
+                      {fmtDate(g.fecha)}
                       {wasExported && (
                         <span style={{ marginLeft: 6 }}>· exportado</span>
                       )}
                     </div>
                   </div>
-                  <div className="numeric weight-700">{fmtMoney(v.monto)}</div>
+                  <div className="numeric weight-700">{fmtMoney(g.monto)}</div>
                   {!selectMode && (
                     <>
-                      <button
-                        className="btn-icon"
-                        onClick={() => toggle(v)}
-                        aria-label={v.estado === 'pendiente' ? 'Marcar cobrado' : 'Marcar pendiente'}
-                        style={{
-                          background: v.estado === 'recuperado' ? 'var(--c-success-soft)' : 'var(--c-warn-soft)',
-                          color: v.estado === 'recuperado' ? 'var(--c-success)' : 'var(--c-warn)',
-                        }}
-                      >
-                        {v.estado === 'recuperado' ? <RotateCcw size={15} /> : <Check size={15} />}
-                      </button>
-                      <button className="btn-icon" onClick={() => setEditing(v)} aria-label="Editar">
+                      <button className="btn-icon" onClick={() => setEditing(g)} aria-label="Editar">
                         <Pencil size={14} />
                       </button>
-                      <button className="btn-icon" onClick={() => borrar(v)} aria-label="Borrar">
+                      <button className="btn-icon" onClick={() => borrar(g)} aria-label="Borrar">
                         <Trash2 size={14} />
                       </button>
                     </>
                   )}
                 </div>
-                {v.comprobantePath && (
+                {g.comprobantePath && (
                   <div className="mt-8">
                     <BlobImage
                       bucket="comprobantes"
-                      path={v.comprobantePath}
+                      path={g.comprobantePath}
                       alt="Comprobante"
                       onClick={
                         selectMode
                           ? undefined
-                          : () => abrirPreview(v.comprobantePath)
+                          : () => abrirPreview(g.comprobantePath)
                       }
                       style={{
                         maxHeight: 140,
@@ -371,16 +324,6 @@ export function Viaticos() {
                     />
                   </div>
                 )}
-                <div className="row gap-8">
-                  <span
-                    className={
-                      'badge ' +
-                      (v.estado === 'recuperado' ? 'badge-success' : 'badge-warn')
-                    }
-                  >
-                    {v.estado === 'recuperado' ? 'Recuperado' : 'Pendiente de recuperar'}
-                  </span>
-                </div>
               </div>
             )
           })}
@@ -388,10 +331,7 @@ export function Viaticos() {
       )}
 
       {preview && (
-        <div
-          className="modal-backdrop"
-          onClick={() => setPreview(null)}
-        >
+        <div className="modal-backdrop" onClick={() => setPreview(null)}>
           <img
             src={preview}
             alt="Comprobante"
@@ -407,7 +347,7 @@ export function Viaticos() {
       <Modal
         open={!!editing}
         onClose={() => setEditing(null)}
-        title={editing?.id ? 'Editar viático' : 'Nuevo viático'}
+        title={editing?.id ? 'Editar gasto' : 'Nuevo gasto'}
         footer={
           <>
             <button className="btn btn-ghost" onClick={() => setEditing(null)}>
@@ -452,26 +392,9 @@ export function Viaticos() {
                 className="input"
                 value={editing.concepto ?? ''}
                 onChange={(e) => setEditing({ ...editing, concepto: e.target.value })}
-                placeholder="Ej. Nafta viaje a la obra, flete arena…"
+                placeholder="Ej. Herramienta, materiales propios…"
               />
             </div>
-            <div className="field">
-              <label className="field-label">Estado</label>
-              <select
-                className="select"
-                value={editing.estado ?? 'pendiente'}
-                onChange={(e) =>
-                  setEditing({
-                    ...editing,
-                    estado: e.target.value as 'pendiente' | 'recuperado',
-                  })
-                }
-              >
-                <option value="pendiente">Pendiente de recuperar</option>
-                <option value="recuperado">Recuperado</option>
-              </select>
-            </div>
-
             <div className="field">
               <label className="field-label">Comprobante (foto del ticket)</label>
               {editing.comprobantePath ? (
@@ -499,10 +422,6 @@ export function Viaticos() {
                   <Camera size={14} /> {uploading ? 'Subiendo…' : 'Sacar / elegir foto'}
                 </button>
               )}
-              {/* No 'capture' attribute on purpose: iOS Safari opens its native
-                  sheet with "Tomar foto", "Elegir foto" (galería) y "Elegir
-                  archivo". Forcing capture="environment" would skip the
-                  picker and open the camera directly. */}
               <input
                 ref={fileRef}
                 type="file"

@@ -161,6 +161,22 @@ export interface Viatico {
   /** Path del comprobante en el bucket Storage `comprobantes`. */
   comprobantePath?: string
   estado: EstadoViatico
+  /** ISO timestamp de la última vez que esta fila se incluyó en un PDF
+   * exportado. NULL = nunca exportado. La UI lo usa para pintar la fila en
+   * gris suave. */
+  exportadoEn?: string | null
+}
+
+/** Gastos propios del usuario (no se cobran al comitente). Estructura paralela
+ *  a Viatico pero sin estado pendiente/recuperado. */
+export interface Gasto {
+  id: string
+  obraId: string
+  fecha: string
+  concepto: string
+  monto: number
+  comprobantePath?: string
+  exportadoEn?: string | null
 }
 
 export interface FojaPeriodo {

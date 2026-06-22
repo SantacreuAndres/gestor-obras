@@ -5,6 +5,7 @@ import type {
   Deadline,
   Material,
   Viatico,
+  Gasto,
   Contacto,
   ContactoObra,
   Documento,
@@ -222,6 +223,58 @@ export const viaticosApi = {
 
   delete: async (id: string): Promise<void> => {
     const { error } = await supabase.from('viaticos').delete().eq('id', id)
+    if (error) throw error
+  },
+
+  /** Marca un conjunto de viáticos como "exportados ahora" (timestamp NOW).
+   *  Idempotente: vuelve a actualizar la marca aunque ya tuvieran una. */
+  markExported: async (ids: string[]): Promise<void> => {
+    if (ids.length === 0) return
+    const { error } = await supabase
+      .from('viaticos')
+      .update({ exportado_en: new Date().toISOString() })
+      .in('id', ids)
+    if (error) throw error
+  },
+}
+
+// ============================================================
+// GASTOS (gastos propios — no se cobran al comitente)
+// ============================================================
+export const gastosApi = {
+  byObra: async (obraId: string): Promise<Gasto[]> =>
+    unwrap<Gasto[]>(
+      await supabase
+        .from('gastos')
+        .select('*')
+        .eq('obra_id', obraId)
+        .order('fecha', { ascending: false }),
+    ),
+
+  put: async (g: Gasto): Promise<Gasto> =>
+    unwrap<Gasto>(
+      await supabase.from('gastos').upsert(toDb(g)).select().single(),
+    ),
+
+  update: async (id: string, patch: Partial<Gasto>): Promise<void> => {
+    const { error } = await supabase
+      .from('gastos')
+      .update(toDb(patch))
+      .eq('id', id)
+    if (error) throw error
+  },
+
+  delete: async (id: string): Promise<void> => {
+    const { error } = await supabase.from('gastos').delete().eq('id', id)
+    if (error) throw error
+  },
+
+  markExported: async (ids: string[]): Promise<void> => {
+    if (ids.length === 0) return
+    const { error } = await supabase
+      .from('gastos')
+      .update({ exportado_en: new Date().toISOString() })
+      .in('id', ids)
     if (error) throw error
   },
 }
