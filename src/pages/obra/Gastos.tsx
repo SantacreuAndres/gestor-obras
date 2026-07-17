@@ -20,6 +20,8 @@ import {
   removeFromBucket,
   getDataUrl,
 } from '../../lib/storage'
+import { runOcr } from '../../lib/ocr'
+import { parseComprobante } from '../../lib/parseComprobante'
 import type { Gasto } from '../../db/schema'
 import { uid, todayIso } from '../../lib/ids'
 import { fmtMoney, fmtDate } from '../../lib/format'
@@ -41,6 +43,7 @@ export function Gastos() {
   const [editing, setEditing] = useState<Partial<Gasto> | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [reading, setReading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const [selectMode, setSelectMode] = useState(false)
@@ -98,12 +101,43 @@ export function Gastos() {
     if (!f || !editing) return
     try {
       setUploading(true)
-      const path = await uploadToBucket('comprobantes', obra.id, f)
-      setEditing({ ...editing, comprobantePath: path })
+      const uploadP = uploadToBucket('comprobantes', obra.id, f)
+      setReading(true)
+      const ocrP = runOcr(f)
+        .then((txt) => parseComprobante(txt))
+        .catch((err) => {
+          console.error('[ocr] error', err)
+          return null
+        })
+      const path = await uploadP
+      setUploading(false)
+      setEditing((prev) =>
+        prev ? { ...prev, comprobantePath: path } : prev,
+      )
+      const parsed = await ocrP
+      setReading(false)
+      if (!parsed) return
+      setEditing((prev) => {
+        if (!prev) return prev
+        const next = { ...prev }
+        if (parsed.fecha && (!prev.fecha || prev.fecha === todayIso())) {
+          next.fecha = parsed.fecha
+        }
+        if (parsed.monto && (!prev.monto || prev.monto === 0)) {
+          next.monto = parsed.monto
+        }
+        if (parsed.concepto && !prev.concepto?.trim()) {
+          next.concepto = parsed.referencia
+            ? `${parsed.concepto} · Ref ${parsed.referencia}`
+            : parsed.concepto
+        }
+        return next
+      })
     } catch (err) {
       alert('Error subiendo el comprobante: ' + (err as Error).message)
     } finally {
       setUploading(false)
+      setReading(false)
     }
   }
 
@@ -422,6 +456,11 @@ export function Gastos() {
                 >
                   <Camera size={14} /> {uploading ? 'Subiendo…' : 'Sacar / elegir foto'}
                 </button>
+              )}
+              {reading && (
+                <div className="text-xs text-muted mt-8">
+                  Leyendo comprobante… (los campos se completan solos)
+                </div>
               )}
               <input
                 ref={fileRef}

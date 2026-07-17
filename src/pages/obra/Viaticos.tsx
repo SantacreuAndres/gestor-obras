@@ -22,6 +22,8 @@ import {
   removeFromBucket,
   getDataUrl,
 } from '../../lib/storage'
+import { runOcr } from '../../lib/ocr'
+import { parseComprobante } from '../../lib/parseComprobante'
 import type { Viatico } from '../../db/schema'
 import { uid, todayIso } from '../../lib/ids'
 import { fmtMoney, fmtDate } from '../../lib/format'
@@ -44,6 +46,7 @@ export function Viaticos() {
   const [editing, setEditing] = useState<Partial<Viatico> | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [reading, setReading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Selection mode: shows checkboxes and an export button.
@@ -106,12 +109,49 @@ export function Viaticos() {
     if (!f || !editing) return
     try {
       setUploading(true)
-      const path = await uploadToBucket('comprobantes', obra.id, f)
-      setEditing({ ...editing, comprobantePath: path })
+      // Upload + OCR corren en paralelo — el OCR es lento (Tesseract carga
+      // el modelo de ~10MB la primera vez) pero no bloquea el upload.
+      const uploadP = uploadToBucket('comprobantes', obra.id, f)
+      setReading(true)
+      const ocrP = runOcr(f)
+        .then((txt) => parseComprobante(txt))
+        .catch((err) => {
+          console.error('[ocr] error', err)
+          return null
+        })
+      const path = await uploadP
+      setUploading(false)
+      // Fusionamos el path enseguida (así el usuario ve la foto en el modal).
+      setEditing((prev) =>
+        prev ? { ...prev, comprobantePath: path } : prev,
+      )
+      // Cuando el OCR termina, precargamos SOLO los campos que estén vacíos /
+      // en su default — así no pisamos algo que el usuario haya tipeado
+      // mientras esperaba.
+      const parsed = await ocrP
+      setReading(false)
+      if (!parsed) return
+      setEditing((prev) => {
+        if (!prev) return prev
+        const next = { ...prev }
+        if (parsed.fecha && (!prev.fecha || prev.fecha === todayIso())) {
+          next.fecha = parsed.fecha
+        }
+        if (parsed.monto && (!prev.monto || prev.monto === 0)) {
+          next.monto = parsed.monto
+        }
+        if (parsed.concepto && !prev.concepto?.trim()) {
+          next.concepto = parsed.referencia
+            ? `${parsed.concepto} · Ref ${parsed.referencia}`
+            : parsed.concepto
+        }
+        return next
+      })
     } catch (err) {
       alert('Error subiendo el comprobante: ' + (err as Error).message)
     } finally {
       setUploading(false)
+      setReading(false)
     }
   }
 
@@ -499,6 +539,11 @@ export function Viaticos() {
                 >
                   <Camera size={14} /> {uploading ? 'Subiendo…' : 'Sacar / elegir foto'}
                 </button>
+              )}
+              {reading && (
+                <div className="text-xs text-muted mt-8">
+                  Leyendo comprobante… (los campos se completan solos)
+                </div>
               )}
               {/* No 'capture' attribute on purpose: iOS Safari opens its native
                   sheet with "Tomar foto", "Elegir foto" (galería) y "Elegir
