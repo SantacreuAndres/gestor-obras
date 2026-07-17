@@ -161,6 +161,7 @@ export function Viaticos() {
       await exportarPdf({
         titulo: 'Viáticos',
         obra: obra.nombre,
+        comitente: obra.comitente,
         items: itemsConFotos,
       })
       // Solo marcamos como exportados después de que el PDF se generó bien.

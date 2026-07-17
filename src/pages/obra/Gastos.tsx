@@ -145,6 +145,7 @@ export function Gastos() {
       await exportarPdf({
         titulo: 'Gastos',
         obra: obra.nombre,
+        comitente: obra.comitente,
         items: itemsConFotos,
       })
       await gastosApi.markExported(ids)
