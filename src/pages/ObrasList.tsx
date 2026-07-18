@@ -8,7 +8,12 @@ import {
   AlertTriangle,
   Wallet,
 } from 'lucide-react'
-import { obras as obrasApi, deadlines as deadlinesApi, viaticos as viaticosApi } from '../db/db'
+import {
+  obras as obrasApi,
+  deadlines as deadlinesApi,
+  viaticos as viaticosApi,
+  gastos as gastosApi,
+} from '../db/db'
 import { useLive } from '../hooks/useLive'
 import { ETAPA_LABEL, fmtDate, fmtMoney, diasHasta } from '../lib/format'
 import { EmptyState } from '../components/EmptyState'
@@ -24,6 +29,19 @@ export function ObrasList() {
   const obras = useLive('obras', () => obrasApi.list(), []) ?? []
   const deadlines = useLive('deadlines', () => deadlinesApi.list(), []) ?? []
   const viaticos = useLive('viaticos', () => viaticosApi.list(), []) ?? []
+  // We fetch all gastos across every obra to feed the "A cobrar" KPI and the
+  // /exportar screen. Since gastos live in a single table, one round-trip is
+  // enough; the KPI stays fresh via realtime.
+  const allGastos = useLive(
+    'gastos',
+    async () => {
+      const perObra = await Promise.all(
+        obras.map((o) => gastosApi.byObra(o.id)),
+      )
+      return perObra.flat()
+    },
+    [obras.map((o) => o.id).join(',')],
+  ) ?? []
 
   const obrasFiltradas = useMemo(() => {
     if (filtro === 'todas') return obras
@@ -41,13 +59,18 @@ export function ObrasList() {
       .slice(0, 5)
   }, [deadlines, obras])
 
-  const viaticosACobrar = useMemo(
-    () =>
-      viaticos
-        .filter((v) => v.estado === 'pendiente')
-        .reduce((acc, v) => acc + v.monto, 0),
+  // "A cobrar" = viáticos pendientes de recuperar + todos los gastos propios.
+  // Los gastos no tienen estado pendiente/recuperado, así que suman completos.
+  const viaticosPendientes = useMemo(
+    () => viaticos.filter((v) => v.estado === 'pendiente'),
     [viaticos],
   )
+  const aCobrar = useMemo(() => {
+    const v = viaticosPendientes.reduce((acc, x) => acc + x.monto, 0)
+    const g = allGastos.reduce((acc, x) => acc + x.monto, 0)
+    return v + g
+  }, [viaticosPendientes, allGastos])
+  const aCobrarCount = viaticosPendientes.length + allGastos.length
 
   const obrasActivas = obras.filter((o) => o.estado === 'activa').length
 
@@ -100,12 +123,21 @@ export function ObrasList() {
             vencidos
           </div>
         </div>
-        <div className="kpi">
-          <div className="kpi-label">Viáticos a cobrar</div>
-          <div className="kpi-value numeric">{fmtMoney(viaticosACobrar)}</div>
+        <div
+          className="kpi card-clickable"
+          onClick={() => navigate('/exportar')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') navigate('/exportar')
+          }}
+          aria-label="Ir a exportar viáticos y gastos"
+          style={{ cursor: 'pointer' }}
+        >
+          <div className="kpi-label">A cobrar</div>
+          <div className="kpi-value numeric">{fmtMoney(aCobrar)}</div>
           <div className="kpi-foot">
-            {viaticos.filter((v) => v.estado === 'pendiente').length} pendiente
-            {viaticos.filter((v) => v.estado === 'pendiente').length === 1 ? '' : 's'}
+            {aCobrarCount} ítem{aCobrarCount === 1 ? '' : 's'} · tocá para exportar
           </div>
         </div>
       </div>

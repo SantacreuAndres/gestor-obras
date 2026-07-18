@@ -6,6 +6,7 @@ import { Contactos } from './pages/Contactos'
 import { Configuracion } from './pages/Configuracion'
 import { CalendarPage } from './pages/Calendar'
 import { Planner } from './pages/Planner'
+import { ExportarGlobal } from './pages/ExportarGlobal'
 import { Datos } from './pages/obra/Datos'
 import { Notas } from './pages/obra/Notas'
 import { Deadlines } from './pages/obra/Deadlines'
@@ -58,6 +59,7 @@ export default function App() {
           <Route path="plata" element={<Plata />} />
           <Route path="medicion" element={<Medicion />} />
         </Route>
+        <Route path="/exportar" element={<ExportarGlobal />} />
         <Route path="/planner" element={<Planner />} />
         <Route path="/calendario" element={<CalendarPage />} />
         <Route path="/contactos" element={<Contactos />} />

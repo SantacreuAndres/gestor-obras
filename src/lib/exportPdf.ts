@@ -524,3 +524,405 @@ export async function exportarPdf(opts: ExportOptions): Promise<void> {
   a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
+
+// ============================================================================
+// Export COMBINADO (viáticos + gastos, de todas las obras)
+// ============================================================================
+
+/** Item con obra de origen para el reporte combinado. */
+export interface CombinedItem extends ExportItem {
+  obra?: string
+}
+
+interface CombinedOptions {
+  viaticos: CombinedItem[]
+  gastos: CombinedItem[]
+}
+
+type SizedCombinedItem = CombinedItem & {
+  imgSize: { w: number; h: number } | null
+  imgFormat: 'JPEG' | 'PNG' | 'WEBP' | null
+}
+
+async function resolveSizesCombined(
+  items: CombinedItem[],
+): Promise<SizedCombinedItem[]> {
+  return Promise.all(
+    items.map(async (it) => {
+      if (!it.comprobanteDataUrl) return { ...it, imgSize: null, imgFormat: null }
+      try {
+        const size = await imageSize(it.comprobanteDataUrl)
+        return { ...it, imgSize: size, imgFormat: imageFormat(it.comprobanteDataUrl) }
+      } catch {
+        return { ...it, imgSize: null, imgFormat: null }
+      }
+    }),
+  )
+}
+
+/** Header grande de la primera página del reporte combinado. */
+function drawCombinedHeader(
+  doc: jsPDF,
+  hoyTxt: string,
+  nroReporte: string,
+): number {
+  drawBrandMark(doc, MARGIN, 44)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(30)
+  setText(doc, TEXT)
+  doc.text('REPORTE', PAGE_W - MARGIN, 76, { align: 'right' })
+
+  let y = 130
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  setText(doc, MUTED)
+  doc.text('REPORTADO POR', MARGIN, y)
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(14)
+  setText(doc, TEXT)
+  doc.text(NOMBRE, MARGIN, y + 16)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  setText(doc, MUTED)
+  doc.text(ROL, MARGIN, y + 30)
+
+  const rightX = MARGIN + USABLE_W / 2 + 20
+  const rightLabelW = 92
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  setText(doc, MUTED)
+  doc.text('N° Reporte', rightX, y)
+  doc.text('Fecha', rightX, y + 16)
+  doc.text('Alias', rightX, y + 32)
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(10)
+  setText(doc, TEXT)
+  doc.text(': ' + nroReporte, rightX + rightLabelW - 30, y)
+  doc.text(': ' + hoyTxt, rightX + rightLabelW - 30, y + 16)
+  doc.text(': ' + ALIAS, rightX + rightLabelW - 30, y + 32)
+
+  y += 62
+  setDraw(doc, BORDER)
+  doc.setLineWidth(0.5)
+  doc.line(MARGIN, y, PAGE_W - MARGIN, y)
+  return y + 20
+}
+
+/** Header chico para páginas siguientes del combinado. */
+function drawCombinedHeaderSmall(doc: jsPDF): number {
+  const y = 50
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(11)
+  setText(doc, TEXT)
+  doc.text('REPORTE', MARGIN, y)
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  setText(doc, MUTED)
+  doc.text(NOMBRE, PAGE_W - MARGIN, y, { align: 'right' })
+
+  setDraw(doc, BORDER)
+  doc.setLineWidth(0.4)
+  doc.line(MARGIN, y + 8, PAGE_W - MARGIN, y + 8)
+  return y + 24
+}
+
+/** Column widths for combined table: # | FECHA | OBRA | DESCRIPCIÓN | MONTO */
+const COMBINED_COLS = [30, 70, 100, USABLE_W - 30 - 70 - 100 - 90, 90]
+const COMBINED_ALIGNS: ('left' | 'center' | 'right')[] = [
+  'center',
+  'left',
+  'left',
+  'left',
+  'right',
+]
+
+function drawTableHeaderRow(doc: jsPDF, y: number): number {
+  const headerH = 26
+  setFill(doc, DARK)
+  doc.rect(MARGIN, y, USABLE_W, headerH, 'F')
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(9)
+  setText(doc, [255, 255, 255])
+  const headers = ['#', 'FECHA', 'OBRA', 'DESCRIPCIÓN', 'MONTO']
+  let cx = MARGIN
+  headers.forEach((h, i) => {
+    const w = COMBINED_COLS[i]
+    const tx =
+      COMBINED_ALIGNS[i] === 'center'
+        ? cx + w / 2
+        : COMBINED_ALIGNS[i] === 'right'
+          ? cx + w - 10
+          : cx + 10
+    doc.text(h, tx, y + 17, { align: COMBINED_ALIGNS[i] })
+    cx += w
+  })
+  return y + headerH
+}
+
+function drawTableRow(
+  doc: jsPDF,
+  item: SizedCombinedItem,
+  index: number,
+  y: number,
+): number {
+  const rowH = 24
+  if (index % 2 === 0) {
+    setFill(doc, STRIPE)
+    doc.rect(MARGIN, y, USABLE_W, rowH, 'F')
+  }
+  const values = [
+    String(index + 1).padStart(2, '0'),
+    fmtDate(item.fecha),
+    item.obra ?? '—',
+    item.concepto,
+    fmtMoney(item.monto),
+  ]
+  let cx = MARGIN
+  values.forEach((v, j) => {
+    const w = COMBINED_COLS[j]
+    const tx =
+      COMBINED_ALIGNS[j] === 'center'
+        ? cx + w / 2
+        : COMBINED_ALIGNS[j] === 'right'
+          ? cx + w - 10
+          : cx + 10
+    doc.setFont('helvetica', j === 4 ? 'bold' : 'normal')
+    doc.setFontSize(10)
+    setText(doc, TEXT)
+    if (j === 2 || j === 3) {
+      const lines = doc.splitTextToSize(v, w - 20) as string[]
+      doc.text(lines[0] + (lines.length > 1 ? '…' : ''), tx, y + 16, {
+        align: COMBINED_ALIGNS[j],
+      })
+    } else {
+      doc.text(v, tx, y + 16, { align: COMBINED_ALIGNS[j] })
+    }
+    cx += w
+  })
+  return y + rowH
+}
+
+function drawSubtotalRow(
+  doc: jsPDF,
+  label: string,
+  amount: number,
+  y: number,
+): number {
+  const rowH = 26
+  setDraw(doc, DARK)
+  doc.setLineWidth(0.8)
+  doc.line(MARGIN, y, PAGE_W - MARGIN, y)
+  y += 6
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(10)
+  setText(doc, MUTED)
+  doc.text(label, PAGE_W - MARGIN - 200, y + 14)
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(12)
+  setText(doc, TEXT)
+  doc.text(fmtMoney(amount), PAGE_W - MARGIN - 10, y + 14, { align: 'right' })
+
+  return y + rowH
+}
+
+function drawSectionHeader(
+  doc: jsPDF,
+  label: string,
+  y: number,
+): number {
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(11)
+  setText(doc, TEXT)
+  doc.text(label, MARGIN, y + 12)
+  return y + 22
+}
+
+/** Genera el reporte combinado: viáticos + gastos con dos tablas y total. */
+export async function exportarPdfCombinado(
+  opts: CombinedOptions,
+): Promise<void> {
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+  const now = new Date()
+  const hoyTxt = new Intl.DateTimeFormat('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(now)
+  const nroReporte = formatReportNumber('REP', now)
+
+  const viaticos = await resolveSizesCombined(opts.viaticos)
+  const gastos = await resolveSizesCombined(opts.gastos)
+  const totalViaticos = viaticos.reduce((acc, it) => acc + it.monto, 0)
+  const totalGastos = gastos.reduce((acc, it) => acc + it.monto, 0)
+  const totalGeneral = totalViaticos + totalGastos
+
+  // ---- Página 1: header + secciones
+  let y = drawCombinedHeader(doc, hoyTxt, nroReporte)
+
+  const drawSection = (
+    label: string,
+    items: SizedCombinedItem[],
+    subtotal: number,
+  ) => {
+    // ¿Entra el section header + al menos 1 fila? Si no, salto de página.
+    const minNeeded = 22 + 26 + 24 + 40 // section head + table header + 1 row + subtotal
+    if (y + minNeeded > PAGE_H - MARGIN - 100) {
+      doc.addPage()
+      y = drawCombinedHeaderSmall(doc)
+    }
+    y = drawSectionHeader(doc, label, y)
+    if (items.length === 0) {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10)
+      setText(doc, MUTED)
+      doc.text('Sin ítems seleccionados en esta sección.', MARGIN, y + 12)
+      y += 20
+      return
+    }
+    y = drawTableHeaderRow(doc, y)
+    items.forEach((it, i) => {
+      // Si la próxima fila no entra, salto de página y redibujo el header de tabla.
+      if (y + 24 > PAGE_H - MARGIN - 60) {
+        doc.addPage()
+        y = drawCombinedHeaderSmall(doc)
+        y = drawSectionHeader(doc, label + ' (cont.)', y)
+        y = drawTableHeaderRow(doc, y)
+      }
+      y = drawTableRow(doc, it, i, y)
+    })
+    y = drawSubtotalRow(doc, `Subtotal ${label.toLowerCase()}`, subtotal, y)
+    y += 14
+  }
+
+  drawSection('VIÁTICOS', viaticos, totalViaticos)
+  drawSection('GASTOS', gastos, totalGastos)
+
+  // ---- Fila TOTAL GENERAL (destacada)
+  const totalRowH = 40
+  if (y + totalRowH + 100 > PAGE_H - MARGIN) {
+    doc.addPage()
+    y = drawCombinedHeaderSmall(doc)
+  }
+  y += 6
+  setFill(doc, DARK)
+  doc.rect(MARGIN, y, USABLE_W, totalRowH, 'F')
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(14)
+  setText(doc, [255, 255, 255])
+  doc.text('TOTAL GENERAL', MARGIN + 16, y + 26)
+  doc.text(fmtMoney(totalGeneral), PAGE_W - MARGIN - 12, y + 26, {
+    align: 'right',
+  })
+  y += totalRowH + 30
+
+  // ---- Total a recuperar block (highlight)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  setText(doc, MUTED)
+  doc.text('TOTAL A RECUPERAR', MARGIN, y)
+  y += 26
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(28)
+  setText(doc, TEXT)
+  doc.text(fmtMoney(totalGeneral), MARGIN, y)
+  y += 8
+  setDraw(doc, DARK)
+  doc.setLineWidth(1.6)
+  doc.line(MARGIN, y, MARGIN + 200, y)
+  y += 22
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  setText(doc, MUTED)
+  doc.text('Alias para transferencia', MARGIN, y)
+  y += 14
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(13)
+  setText(doc, TEXT)
+  doc.text(ALIAS, MARGIN, y)
+
+  // Footer de todas las páginas del cuerpo
+  const footerTxt = `${NOMBRE} · Reporte · Generado el ${hoyTxt}`
+  const pageCount = doc.getNumberOfPages()
+  for (let p = 1; p <= pageCount; p++) {
+    doc.setPage(p)
+    drawPageFooter(doc, footerTxt)
+  }
+
+  // ---- Páginas de comprobantes (viáticos primero, gastos después)
+  const withPhotos: SizedCombinedItem[] = [
+    ...viaticos.filter((it) => it.imgSize && it.comprobanteDataUrl),
+    ...gastos.filter((it) => it.imgSize && it.comprobanteDataUrl),
+  ]
+  if (withPhotos.length > 0) {
+    doc.addPage()
+    const perPage = 2
+    const headerBottom = 74
+    const footerReserve = 40
+    const availableH = PAGE_H - headerBottom - footerReserve
+    const slotGap = 16
+    const slotH = (availableH - slotGap) / perPage
+
+    withPhotos.forEach((it, i) => {
+      const posOnPage = i % perPage
+      if (posOnPage === 0) {
+        if (i > 0) doc.addPage()
+        // Reusamos el header de comprobantes pero con opts genéricas
+        const y2 = 50
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(11)
+        setText(doc, TEXT)
+        doc.text('COMPROBANTES', MARGIN, y2)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(10)
+        setText(doc, MUTED)
+        const subtitle = `${NOMBRE} · Viáticos y Gastos${it.obra ? '' : ''}`
+        doc.text(subtitle, PAGE_W - MARGIN, y2, { align: 'right' })
+        setDraw(doc, BORDER)
+        doc.setLineWidth(0.4)
+        doc.line(MARGIN, y2 + 8, PAGE_W - MARGIN, y2 + 8)
+        drawPageFooter(doc, footerTxt)
+      }
+      const slotY = headerBottom + posOnPage * (slotH + slotGap)
+      // drawComprobanteSlot works with SizedItem; SizedCombinedItem is a
+      // superset so the shape is compatible.
+      drawComprobanteSlot(doc, it as unknown as SizedItem, i + 1, slotY, slotH)
+    })
+  }
+
+  // ---- Salida
+  const filename = `reporte-${now.toISOString().slice(0, 10)}.pdf`
+  const blob = doc.output('blob') as Blob
+
+  type NavigatorWithShare = Navigator & {
+    canShare?: (data: ShareData) => boolean
+    share?: (data: ShareData) => Promise<void>
+  }
+  const nav = navigator as NavigatorWithShare
+  const file = new File([blob], filename, { type: 'application/pdf' })
+  if (nav.canShare?.({ files: [file] }) && nav.share) {
+    try {
+      await nav.share({
+        files: [file],
+        title: 'Reporte de viáticos y gastos',
+        text: `Reporte · ${hoyTxt}`,
+      })
+      return
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return
+    }
+  }
+
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
